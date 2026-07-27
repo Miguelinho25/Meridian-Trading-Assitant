@@ -1,0 +1,111 @@
+# ---------------------------------------------------------------------------
+# Secrets — never commit. Additive, deny-by-default posture.
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+credentials.json
+secrets.json
+*.secret
+.secrets/
+broker-credentials*
+*_rsa
+*_ed25519
+
+# ---------------------------------------------------------------------------
+# Python
+# ---------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+.probe/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+.hypothesis/
+
+# ---------------------------------------------------------------------------
+# Node / Next.js
+# ---------------------------------------------------------------------------
+node_modules/
+.next/
+out/
+.turbo/
+*.tsbuildinfo
+.eslintcache
+playwright-report/
+test-results/
+blob-report/
+.playwright/
+
+# ---------------------------------------------------------------------------
+# Databases and generated runtime state
+# ---------------------------------------------------------------------------
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.db-wal
+*.db-shm
+local.db*
+/var/
+/run/
+
+# ---------------------------------------------------------------------------
+# Market data — large, regenerable, and licence-encumbered if from a vendor.
+# Synthetic sample fixtures are committed explicitly via a negation below.
+# ---------------------------------------------------------------------------
+data/parquet/**
+!data/parquet/.gitkeep
+*.csv.gz
+*.h5
+
+# ---------------------------------------------------------------------------
+# Obsidian vault — generated notes are derived state, not source of truth.
+# Templates and the system folder ARE committed; trade notes are not.
+# ---------------------------------------------------------------------------
+obsidian-vault/01-Trades/**
+obsidian-vault/03-Market-Regimes/**
+obsidian-vault/06-Experiments/**
+obsidian-vault/07-Reviews/**
+obsidian-vault/08-Risk-Events/**
+obsidian-vault/09-Model-Insights/**
+!obsidian-vault/**/.gitkeep
+.obsidian/
+.trash/
+obsidian-vault/**/*.backup-*
+
+# ---------------------------------------------------------------------------
+# Logs and audit exports (audit source of truth is the database, not files)
+# ---------------------------------------------------------------------------
+*.log
+logs/
+audit-export-*
+
+# ---------------------------------------------------------------------------
+# OS / editor
+# ---------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+*~
