@@ -333,6 +333,7 @@ kill-switch state is treated as engaged, not disengaged.
 | [prop-firm-profiles.md](prop-firm-profiles.md) | Profile schema, verification discipline, simulator |
 | [backtesting-methodology.md](backtesting-methodology.md) | Validation protocol, bias controls, what may be claimed |
 | [model-routing.md](model-routing.md) | Registry, task permissions, fallback, no-LLM mode |
+| [machine-learning.md](machine-learning.md) | Meta-labelling, purged CV, feature store, model lineage |
 | [obsidian-memory.md](obsidian-memory.md) | Vault boundary, sync direction, allowlist, conflicts |
 | [security.md](security.md) | Secrets, redaction, prompt injection, audit |
 | [development.md](development.md) | Setup and commands |

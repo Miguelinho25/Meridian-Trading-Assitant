@@ -38,8 +38,14 @@ weekend closure) · Parquet/CSV importer · replay provider · quality scoring �
 with `LookAheadError` · feature pipeline · regime classifier v0 · ten-instrument
 watchlist with full contract specs.
 
+Additionally, per [ADR-0006](decisions/0006-ml-as-meta-labelling.md):
+**immutable point-in-time feature store** with independent `feature_version`, and every
+feature declaring its lookback window explicitly (which also yields purge and embargo
+lengths for later model validation). Both are far cheaper now than retrofitted.
+
 **Done when:** replaying the same seed twice is byte-identical; a deliberate look-ahead
-attempt raises; quality gate blocks on stale and crossed quotes.
+attempt raises; quality gate blocks on stale and crossed quotes; a stored feature row is
+reproducible from its `source_bar_hash` and cannot be silently recomputed.
 
 ### Stage C — Risk engine ← *the critical stage*
 Decimal arithmetic (pip value, fx conversion, sizing) · all five rule tiers · limit
@@ -99,7 +105,8 @@ local-model critique · kill switch · tests · docs.
 Live broker execution (**not built, by design**) · the remaining seven dashboards
 (Live Market, Trade Proposals, Prop-Firm Control, Strategy Lab, Neural Memory,
 Analytics, AI Research Desk — shells only) · cloud model providers (interfaces built,
-disabled, untested against real endpoints) · PyTorch · HMM/clustering regime models ·
+disabled, untested against real endpoints) · all trained models, incl. meta-labelling
+and HMM/clustering regime classifiers ([ADR-0006](decisions/0006-ml-as-meta-labelling.md)) ·
 real market-data vendors · multi-user · deployment.
 
 ---

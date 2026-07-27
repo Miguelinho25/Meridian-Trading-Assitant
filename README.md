@@ -82,6 +82,7 @@ Full detail: [docs/architecture.md](docs/architecture.md).
 | [backtesting-methodology.md](docs/backtesting-methodology.md) | Validation protocol, bias controls, claim discipline |
 | [prop-firm-profiles.md](docs/prop-firm-profiles.md) | Profile schema, verification, simulator |
 | [model-routing.md](docs/model-routing.md) | Registry, permissions, fallback, no-LLM mode |
+| [machine-learning.md](docs/machine-learning.md) | Where ML fits, meta-labelling, purged CV, feature store |
 | [obsidian-memory.md](docs/obsidian-memory.md) | Vault boundary, sync, injection defence |
 | [security.md](docs/security.md) | Threat model, secrets, redaction, audit |
 | [development.md](docs/development.md) | Setup, commands, conventions |
