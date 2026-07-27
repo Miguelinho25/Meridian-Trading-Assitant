@@ -1,6 +1,6 @@
 "use client";
 
-import { useSystemHealth } from "@/lib/useSystemHealth";
+import { useSystemHealthContext } from "@/lib/SystemHealthContext";
 import { PRODUCT_NAME } from "@/config/product";
 import { RiskIndicator } from "./RiskIndicator";
 
@@ -20,7 +20,7 @@ const NAV = [
 ];
 
 export function Shell({ children }: { children: React.ReactNode }) {
-  const { health, failed } = useSystemHealth();
+  const { health, failed } = useSystemHealthContext();
 
   return (
     <div className="flex min-h-screen flex-col">

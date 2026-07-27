@@ -1,27 +1,15 @@
 "use client";
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState } from "react";
+import { SystemHealthProvider } from "@/lib/SystemHealthContext";
 
+/**
+ * Application providers.
+ *
+ * React Query was removed here: the only consumer was the system-health poll,
+ * which now runs as a plain loop (see lib/useSystemHealth.ts for why). It will
+ * be reintroduced when there is data that genuinely benefits from caching and
+ * invalidation — backtest runs and journal queries in later stages.
+ */
 export function Providers({ children }: { children: React.ReactNode }) {
-  const [client] = useState(
-    () =>
-      new QueryClient({
-        defaultOptions: {
-          queries: {
-            refetchOnWindowFocus: true,
-            staleTime: 5_000,
-            retry: 1,
-            // The default "online" mode pauses a query when a fetch fails at
-            // the network layer, leaving it pending-idle with no error to
-            // render. Our API is on localhost, so browser connectivity says
-            // nothing about whether it is reachable: keep firing and surface
-            // the failure.
-            networkMode: "always",
-          },
-        },
-      }),
-  );
-
-  return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+  return <SystemHealthProvider>{children}</SystemHealthProvider>;
 }

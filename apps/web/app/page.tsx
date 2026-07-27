@@ -1,7 +1,7 @@
 "use client";
 
 import { type ComponentHealth } from "@/lib/api";
-import { useSystemHealth } from "@/lib/useSystemHealth";
+import { useSystemHealthContext } from "@/lib/SystemHealthContext";
 import { SAFETY_NOTICE } from "@/config/product";
 
 const STATUS_TONE: Record<ComponentHealth["status"], string> = {
@@ -33,7 +33,7 @@ function ComponentRow({ name, health }: { name: string; health: ComponentHealth 
 }
 
 export default function CommandCentre() {
-  const { health: usable, failed, loading, message } = useSystemHealth();
+  const { health: usable, failed, loading, message } = useSystemHealthContext();
 
   // A blank panel reads as a healthy empty one on a risk dashboard, so any
   // state that is neither "loading" nor "has trustworthy data" must explain
