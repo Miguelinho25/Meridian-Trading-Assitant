@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "meridian-web",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/miguelangelmorettlum/Desktop/Meridian/apps/web && npm run dev"
+      ],
+      "port": 3000
+    },
+    {
+      "name": "meridian-api",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/miguelangelmorettlum/Desktop/Meridian && .venv/bin/uvicorn meridian_api.app:app --reload --host 127.0.0.1 --port 8787"
+      ],
+      "port": 8787
+    }
+  ]
+}

@@ -1,0 +1,137 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "meridian"
+version = "0.1.0"
+description = "Forex research, backtesting and risk-control platform"
+requires-python = ">=3.12"
+license = "MIT"
+
+dependencies = [
+    "pydantic>=2.9,<3",
+    "pydantic-settings>=2.5,<3",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "sqlalchemy[asyncio]>=2.0.36,<3",
+    "greenlet>=3.1",  # required by SQLAlchemy's async bridge
+    "alembic>=1.14",
+    "aiosqlite>=0.20",
+    "structlog>=24.4",
+    "python-ulid>=3.0",
+    "httpx>=0.28",
+]
+
+[project.optional-dependencies]
+quant = [
+    "numpy>=2.1",
+    "pandas>=2.2",
+    "scipy>=1.14",
+    "scikit-learn>=1.5",
+    "statsmodels>=0.14",
+    "pyarrow>=18.0",
+]
+postgres = ["asyncpg>=0.30", "psycopg[binary]>=3.2"]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "pytest-cov>=6.0",
+    "hypothesis>=6.115",
+    "ruff>=0.8",
+    "mypy>=1.13",
+    "import-linter>=2.1",
+]
+
+# Each brief-mandated directory holds one underscore-named Python package.
+# `where` takes a list, so the hyphenated layout from the brief is preserved
+# while imports stay valid: `from meridian_config import settings`.
+[tool.setuptools.packages.find]
+where = [
+    "packages/config",
+    "packages/schemas",
+    "packages/persistence",
+    "packages/model-router",
+    "packages/obsidian-memory",
+    "services/market-data",
+    "services/strategy-engine",
+    "services/risk-engine",
+    "services/backtest-engine",
+    "services/paper-broker",
+    "services/journal-engine",
+    "services/analytics-engine",
+    "apps/api",
+    "apps/worker",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+filterwarnings = ["error::DeprecationWarning:meridian_.*"]
+markers = [
+    "risk: risk-engine tests (must pass before any risk change)",
+    "determinism: replay-determinism tests",
+    "postgres: requires MERIDIAN_TEST_POSTGRES_URL",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "A", "C4", "PT", "SIM", "RUF"]
+ignore = ["A003"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unreachable = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["tests.*"]
+disallow_untyped_defs = false
+
+# ---------------------------------------------------------------------------
+# Import boundaries — ADR-0004. These are the structural safety guarantees.
+# ---------------------------------------------------------------------------
+# Contracts cover only packages that exist. The risk-engine and model-router
+# contracts below are written out ready and must be uncommented as those
+# packages land (Stage C and Stage F) — they encode the guarantee that no LLM
+# code path can reach the risk engine.
+[tool.importlinter]
+root_packages = ["meridian_config", "meridian_schemas", "meridian_db", "meridian_api"]
+
+[[tool.importlinter.contracts]]
+name = "Config is the lowest layer and depends on nothing internal"
+type = "forbidden"
+source_modules = ["meridian_config"]
+forbidden_modules = ["meridian_schemas", "meridian_db", "meridian_api"]
+
+[[tool.importlinter.contracts]]
+name = "Schemas never depend on persistence or the application layer"
+type = "forbidden"
+source_modules = ["meridian_schemas"]
+forbidden_modules = ["meridian_db", "meridian_api"]
+
+[[tool.importlinter.contracts]]
+name = "Persistence never imports the application layer"
+type = "forbidden"
+source_modules = ["meridian_db"]
+forbidden_modules = ["meridian_api"]
+
+# --- Activate with Stage C (risk engine) ---------------------------------
+# [[tool.importlinter.contracts]]
+# name = "Risk engine is unreachable from the model router (no LLM may touch risk)"
+# type = "forbidden"
+# source_modules = ["meridian_risk"]
+# forbidden_modules = ["meridian_router"]
+#
+# [[tool.importlinter.contracts]]
+# name = "Risk engine performs no I/O"
+# type = "forbidden"
+# source_modules = ["meridian_risk"]
+# forbidden_modules = ["httpx", "requests", "socket", "urllib", "meridian_db"]

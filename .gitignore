@@ -109,3 +109,7 @@ desktop.ini
 !.vscode/extensions.json
 *.swp
 *~
+
+# Next.js build output inside the monorepo app
+apps/web/.next/
+apps/web/node_modules/

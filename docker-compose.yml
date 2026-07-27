@@ -1,0 +1,51 @@
+# Production-shaped local stack — ADR-0002.
+#
+# Docker is NOT required to run Meridian. The default configuration uses SQLite
+# and an in-process event bus, which is what the machine this was built on has.
+# This file exists so a machine with Docker can run the production-shaped stack
+# without a code change:
+#
+#   docker compose up -d
+#   MERIDIAN_STORAGE_BACKEND=postgres \
+#   MERIDIAN_DATABASE_URL=postgresql+asyncpg://meridian:meridian@localhost:5432/meridian \
+#   MERIDIAN_EVENT_BUS=redis MERIDIAN_REDIS_URL=redis://localhost:6379/0 \
+#   make migrate dev
+#
+# The credentials below are local-development defaults on a bound-to-localhost
+# port. They are not secrets and are not used anywhere else.
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: meridian-postgres
+    environment:
+      POSTGRES_USER: meridian
+      POSTGRES_PASSWORD: meridian
+      POSTGRES_DB: meridian
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - meridian-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U meridian -d meridian"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: meridian-redis
+    command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - meridian-redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  meridian-pgdata:
+  meridian-redisdata:

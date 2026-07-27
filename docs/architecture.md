@@ -89,11 +89,16 @@ Every core function receives a `Clock`. There is no `datetime.now()` below the e
 
 ```python
 class Clock(Protocol):
-    def now(self) -> datetime: ...       # always tz-aware UTC
+    def now(self) -> datetime: ...  # always tz-aware UTC
 
-class SystemClock:  ...   # production / paper
-class ReplayClock:  ...   # backtest; advances only as bars are consumed
-class FrozenClock:  ...   # tests
+
+class SystemClock: ...  # production / paper
+
+
+class ReplayClock: ...  # backtest; advances only as bars are consumed
+
+
+class FrozenClock: ...  # tests
 ```
 
 This buys three properties that are otherwise very hard to get:

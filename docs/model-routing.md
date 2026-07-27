@@ -185,10 +185,10 @@ right.
 ```python
 class AICritique(BaseModel):
     decision: Literal["SUPPORT", "OPPOSE", "ABSTAIN", "NEED_MORE_DATA"]
-    confidence: Decimal                      # [0,1]
-    reasons: list[str]                       # ≤ 5, each ≤ 300 chars
+    confidence: Decimal  # [0,1]
+    reasons: list[str]  # ≤ 5, each ≤ 300 chars
     contradictory_evidence: list[str]
-    similar_cases: list[SimilarCaseRef]      # must cite retrieved IDs
+    similar_cases: list[SimilarCaseRef]  # must cite retrieved IDs
     regime_comparison: str | None
     data_quality_concerns: list[str]
     risk_concerns: list[str]

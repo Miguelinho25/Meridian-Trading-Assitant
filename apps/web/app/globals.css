@@ -1,0 +1,62 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Institutional terminal palette. Deep charcoal, restrained accents.
+ *
+ * Positive and negative indicators are deliberately muted and close in weight:
+ * profit must not dominate the interface, and risk figures carry equal or
+ * greater visual importance than P&L.
+ */
+:root {
+  --surface-0: #0a0b0d;
+  --surface-1: #101216;
+  --surface-2: #16191f;
+  --surface-3: #1d2128;
+
+  --border-subtle: #22262e;
+  --border-strong: #2e3440;
+
+  --text-primary: #e6e8ec;
+  --text-secondary: #9aa1ad;
+  --text-tertiary: #6b7280;
+
+  --positive: #4a9e7f;
+  --negative: #c06a6a;
+  --caution: #b8935a;
+  --info: #5b7fa6;
+
+  --grid-line: rgba(255, 255, 255, 0.022);
+}
+
+html,
+body {
+  background: var(--surface-0);
+  color: var(--text-primary);
+  font-feature-settings: "tnum" 1, "cv05" 1;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Subtle structural grid — present, never decorative. */
+.grid-surface {
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+/* Numeric data must align across rows in dense tables. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
