@@ -296,8 +296,7 @@ class TestAccountingAndReconciliation:
     def test_an_unpriceable_position_marks_the_account_unreconciled(self, broker, decision) -> None:
         """Silently valuing it at zero would corrupt every downstream limit."""
         self._open(broker, decision)
-        broker.account.floating_pnl({}, broker.specs, broker.rates)
-        assert not broker.account.is_reconciled
+        assert not broker.account.reconcile({}, broker.specs, broker.rates)
 
 
 class TestExcursions:

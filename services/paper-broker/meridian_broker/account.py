@@ -83,7 +83,7 @@ class Account:
     highest_equity_today: Decimal = Decimal(0)
     realised_pnl: Decimal = Decimal(0)
     total_commission: Decimal = Decimal(0)
-    #: Set when reconciliation fails. Blocks trading until resolved.
+    #: Recomputed by ``reconcile`` on every call. Blocks trading while false.
     is_reconciled: bool = True
 
     def __post_init__(self) -> None:
@@ -92,21 +92,40 @@ class Account:
         if self.highest_equity_today == 0:
             self.highest_equity_today = self.balance
 
+    def unpriceable_positions(
+        self, prices: dict[str, Decimal], specs: dict[str, InstrumentSpec]
+    ) -> tuple[str, ...]:
+        """Positions that cannot be valued from the supplied prices.
+
+        A real feed has gaps — one instrument may have no bar on a date the
+        others do. While that persists, equity is unknowable and trading must
+        block; when the price returns, it must recover.
+        """
+        return tuple(
+            p.position_id
+            for p in self.positions.values()
+            if specs.get(p.instrument) is None or prices.get(p.instrument) is None
+        )
+
     def floating_pnl(
         self,
         prices: dict[str, Decimal],
         specs: dict[str, InstrumentSpec],
         rates: dict[str, Decimal],
     ) -> Decimal:
-        """Unrealised P&L across all positions, in account currency."""
+        """Unrealised P&L across all *priceable* positions, in account currency.
+
+        Pure: it reports a number and mutates nothing. Callers needing to know
+        whether the figure is complete must ask ``unpriceable_positions`` —
+        an earlier version set ``is_reconciled`` here as a side effect, which
+        latched permanently on the first data gap and silently disabled trading
+        for the remainder of a run.
+        """
         total = Decimal(0)
         for position in self.positions.values():
             spec = specs.get(position.instrument)
             price = prices.get(position.instrument)
             if spec is None or price is None:
-                # An unpriceable position makes equity unknowable. Flag rather
-                # than silently valuing it at zero.
-                self.is_reconciled = False
                 continue
             quote_pnl = position.unrealised_quote(price, spec)
             conversion = convert_quote_to_account(spec.quote_ccy, self.currency, rates)
@@ -162,13 +181,16 @@ class Account:
         credit, an unpriceable instrument. Any of those corrupts every downstream
         limit check, so the account is marked unreconciled and trading blocks.
         """
+        unpriceable = self.unpriceable_positions(prices, specs)
         floating = self.floating_pnl(prices, specs, rates)
         expected = quantise_money(self.balance + floating)
         actual = self.equity(prices, specs, rates)
-        ok = abs(expected - actual) <= tolerance
-        if not ok:
-            self.is_reconciled = False
-        return ok and self.is_reconciled
+        arithmetic_ok = abs(expected - actual) <= tolerance
+
+        # Recomputed fresh every call, never latched. A transient data gap must
+        # block trading while it lasts and stop blocking once it clears.
+        self.is_reconciled = arithmetic_ok and not unpriceable
+        return self.is_reconciled
 
     def book_realised(self, amount: Decimal, *, commission: Decimal = Decimal(0)) -> None:
         """Book a closed trade's P&L and update the high-water mark."""

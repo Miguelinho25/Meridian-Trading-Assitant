@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from meridian_strategy.baselines import BASELINE_STRATEGIES, MovingAverageTrend, VolatilityBreakout
 from meridian_strategy.plugin import (
     LifecycleStatus,
     NoAction,
@@ -21,8 +22,10 @@ from meridian_strategy.registry import (
 )
 
 __all__ = [
+    "BASELINE_STRATEGIES",
     "GenerationOutcome",
     "LifecycleStatus",
+    "MovingAverageTrend",
     "NoAction",
     "Registration",
     "RegistryError",
@@ -33,5 +36,6 @@ __all__ = [
     "StrategyPlugin",
     "StrategyRegistry",
     "StrategyResult",
+    "VolatilityBreakout",
     "signals_from",
 ]
