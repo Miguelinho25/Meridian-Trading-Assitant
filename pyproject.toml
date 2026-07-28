@@ -96,6 +96,11 @@ warn_unreachable = true
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
+# pyarrow ships no stubs and is an optional extra — see [project.optional-dependencies].
+module = ["pyarrow.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
 module = ["tests.*"]
 disallow_untyped_defs = false
 

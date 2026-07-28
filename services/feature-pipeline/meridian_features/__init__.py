@@ -2,6 +2,15 @@
 
 from __future__ import annotations
 
+from meridian_features.regime import (
+    CLASSIFIER_VERSION,
+    DEFAULT_CLASSIFIER,
+    RegimeClassification,
+    RegimeClassifier,
+    RuleBasedRegimeClassifier,
+    TrendState,
+    VolatilityState,
+)
 from meridian_features.registry import (
     FEATURE_VERSION,
     FEATURES,
@@ -23,6 +32,8 @@ from meridian_features.store import (
 )
 
 __all__ = [
+    "CLASSIFIER_VERSION",
+    "DEFAULT_CLASSIFIER",
     "FEATURES",
     "FEATURES_BY_NAME",
     "FEATURE_VERSION",
@@ -33,6 +44,11 @@ __all__ = [
     "FeatureRow",
     "FeatureStoreError",
     "InMemoryFeatureStore",
+    "RegimeClassification",
+    "RegimeClassifier",
+    "RuleBasedRegimeClassifier",
+    "TrendState",
+    "VolatilityState",
     "build_series",
     "compute_row",
     "get_feature",

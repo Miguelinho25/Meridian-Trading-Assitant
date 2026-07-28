@@ -9,6 +9,8 @@ from meridian_marketdata.instruments import (
     InstrumentSpec,
     get_spec,
 )
+from meridian_marketdata.provider import MarketDataProvider, MarketStatus
+from meridian_marketdata.providers import FileProvider, ReplayProvider, SyntheticProvider
 from meridian_marketdata.quality import (
     QualityIssue,
     QualityReport,
@@ -31,13 +33,18 @@ __all__ = [
     "WATCHLIST",
     "BarView",
     "Candle",
+    "FileProvider",
     "InstrumentSpec",
     "LookAheadError",
     "MarketDataError",
+    "MarketDataProvider",
+    "MarketStatus",
     "QualityIssue",
     "QualityReport",
     "Quote",
+    "ReplayProvider",
     "SyntheticGenerator",
+    "SyntheticProvider",
     "active_sessions",
     "assess_quote",
     "assess_series",
