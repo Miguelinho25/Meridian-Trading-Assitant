@@ -11,3 +11,4 @@ future reader can tell a considered trade-off from an oversight.
 | [0004](0004-services-as-modules.md) | `services/*` are in-process modules, not microservices | No — clarifies brief |
 | [0005](0005-repo-location.md) | Standalone repo directory; Desktop never a git repo | No — safety |
 | [0006](0006-ml-as-meta-labelling.md) | ML enters as meta-labelling, not price prediction; GBT before deep learning | No — specifies the brief's "statistical learning" |
+| [0007](0007-multi-strategy-platform.md) | Multi-strategy platform with evidence-gated allocator; risk engine evaluates proposal **sets** | Extends the brief's plugin interface |

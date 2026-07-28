@@ -4,6 +4,20 @@ The vault is a **human-readable knowledge layer**, not a database. PostgreSQL ho
 authoritative trade and account data. If the vault were deleted entirely, it could be
 regenerated in full from the database, and nothing financial would be lost.
 
+Per [ADR-0007](decisions/0007-multi-strategy-platform.md) it is also the platform's
+**research laboratory** — the accumulating record of hypotheses, experiments,
+findings, failures and strategy revisions that a multi-strategy system generates.
+Note types and the link structure are specified in
+[strategy-platform.md §9](strategy-platform.md#9-obsidian-as-the-research-laboratory).
+Two rules govern research notes:
+
+* **Every claim carries its evidence level.** A finding's frontmatter records sample
+  size, cells tested, FDR rate and out-of-sample status, so a two-year-old note
+  cannot later be mistaken for established fact when it was a hypothesis all along.
+* **Failures are linked forward.** `Failure → New hypothesis` is the edge that makes
+  this a laboratory rather than a scrapbook; a future question like "why did we
+  abandon mean-reversion on JPY crosses?" needs an answer that survives the years.
+
 ---
 
 ## 1. The boundary
@@ -49,8 +63,8 @@ block — their words are never destroyed, but they never become truth either.
 02-Strategies/   One note per strategy, sections per version
 03-Market-Regimes/
 04-Instruments/  One per pair — the hub notes the graph hangs from
-05-Research/
-06-Experiments/
+05-Research/     Hypotheses, findings, literature
+06-Experiments/  One note per experiment, linked to its hypothesis and result
 07-Reviews/      Daily and weekly
 08-Risk-Events/  Rejections, throttles, near-violations, kill switches
 09-Model-Insights/

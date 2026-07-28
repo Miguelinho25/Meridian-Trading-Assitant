@@ -52,8 +52,18 @@ Decimal arithmetic (pip value, fx conversion, sizing) · all five rule tiers · 
 composition · five profiles · drawdown throttle · prop-firm engine + generic profile ·
 `RiskDecision` with proposal hash · audit integration.
 
+Plus, per [ADR-0007](decisions/0007-multi-strategy-platform.md): the strategy
+**plugin registry** (manifest, fault containment, time budgets, private state), and a
+risk engine that evaluates a **set** of concurrent proposals rather than one at a
+time — with per-strategy sub-budgets and deterministic tie-breaking by allocator
+confidence then proposal hash, never arrival order. With many strategies the binding
+constraint is portfolio risk, not per-trade risk, and retrofitting that into a
+validated risk engine would be far more expensive than building it in.
+
 **Done when:** the full test matrix in [risk-engine.md §9](risk-engine.md#9-test-matrix)
-passes, including every adversarial case. This stage is not "done" at 90%.
+passes, including every adversarial case, plus: two proposals that individually pass
+and jointly breach the budget are resolved deterministically and reproducibly. This
+stage is not "done" at 90%.
 
 ### Stage D — Execution
 Order state machine with validated transitions · paper broker (market/limit/stop, SL/TP,

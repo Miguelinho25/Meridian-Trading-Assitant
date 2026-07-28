@@ -6,6 +6,14 @@ functions, exact arithmetic, no I/O, no clock, no cleverness.
 
 ---
 
+> **Multi-strategy note.** Per [ADR-0007](decisions/0007-multi-strategy-platform.md)
+> the engine evaluates a **set** of concurrent proposals, not one at a time. With
+> many strategies the binding constraint is portfolio risk: fifty proposals can each
+> pass individually and jointly be long EUR across the book. Sequential evaluation
+> would also make the outcome depend on arrival order, which is not reproducible in
+> replay. Set evaluation adds one invariant, I11 below, and per-strategy sub-budgets
+> to Tier C.
+
 ## 1. Invariants
 
 These hold for every evaluation, in every mode, forever. Each maps to a named test in
@@ -23,6 +31,7 @@ These hold for every evaluation, in every mode, forever. Each maps to a named te
 | **I8** | A `RiskDecision` cannot be constructed outside the risk-engine module. |
 | **I9** | Reducing risk never requires confirmation. Increasing risk always does. |
 | **I10** | Every evaluation appends exactly one immutable audit record, whatever the verdict. |
+| **I11** | When concurrent proposals compete for a shared budget, resolution is **deterministic and reproducible** — ranked by allocator confidence, ties broken by proposal hash. Never by arrival order. |
 
 ---
 
@@ -168,6 +177,8 @@ size is the **minimum** of all clamps; the verdict is `REJECTED` if any rule rej
 | `MAX_CORRELATED_EXPOSURE` | Correlation-clustered cap |
 | `MAX_SIMULTANEOUS_POSITIONS` | Open position count |
 | `MAX_TRADES_PER_SESSION` | Session trade count |
+| `MAX_STRATEGY_BUDGET` | Per-strategy share of the portfolio budget |
+| `PORTFOLIO_BUDGET_EXHAUSTED` | Budget consumed by higher-ranked proposals in the same set |
 | `MAX_MARGIN_UTILISATION` | Projected margin use |
 
 Currency exposure counts **both legs**: long EURUSD is long EUR *and* short USD.
