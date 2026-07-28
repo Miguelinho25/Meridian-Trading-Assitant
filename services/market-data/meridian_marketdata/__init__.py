@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from meridian_marketdata.barview import BarView, LookAheadError
+from meridian_marketdata.holidays import easter_sunday, holidays_between, is_market_holiday
 from meridian_marketdata.instruments import (
     CORRELATION_CLUSTERS,
     WATCHLIST,
@@ -48,7 +49,10 @@ __all__ = [
     "active_sessions",
     "assess_quote",
     "assess_series",
+    "easter_sunday",
     "get_spec",
+    "holidays_between",
+    "is_market_holiday",
     "is_rollover",
     "is_weekend",
     "liquidity_factor",

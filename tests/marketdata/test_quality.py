@@ -133,3 +133,65 @@ class TestDegradedStillBlocks:
         report = assess_series(holed, spec=SPEC, timeframe=Timeframe.H1, now=NOW)
         if report.verdict is DataQualityVerdict.DEGRADED:
             assert report.blocks_trading
+
+
+class TestResearchVersusLiveTrading:
+    """Conflating these was a real bug: sixteen years of genuine daily history
+    containing a dozen holiday gaps would have been permanently unusable."""
+
+    def _degraded_series(self):
+        bars = SyntheticGenerator("EURUSD", seed=42).generate_list(START, 300)
+        return bars[:150] + bars[151:]  # one missing bar -> DEGRADED, not INVALID
+
+    def test_degraded_blocks_live_trading(self) -> None:
+        report = assess_series(self._degraded_series(), spec=SPEC, timeframe=Timeframe.H1, now=NOW)
+        if report.verdict is DataQualityVerdict.DEGRADED:
+            assert report.blocks_trading
+
+    def test_degraded_is_still_usable_for_research(self) -> None:
+        report = assess_series(self._degraded_series(), spec=SPEC, timeframe=Timeframe.H1, now=NOW)
+        if report.verdict is DataQualityVerdict.DEGRADED:
+            assert report.usable_for_research
+
+    def test_invalid_blocks_both(self) -> None:
+        report = assess_series([], spec=SPEC, timeframe=Timeframe.H1, now=NOW)
+        assert report.verdict is DataQualityVerdict.INVALID
+        assert report.blocks_trading
+        assert not report.usable_for_research
+
+    def test_ok_permits_both(self) -> None:
+        bars = SyntheticGenerator("EURUSD", seed=42).generate_list(START, 200)
+        report = assess_series(bars, spec=SPEC, timeframe=Timeframe.H1, now=NOW)
+        assert report.verdict is DataQualityVerdict.OK
+        assert not report.blocks_trading
+        assert report.usable_for_research
+
+
+class TestHolidayGapsAreNotDataFaults:
+    def test_christmas_gap_is_not_counted_as_missing(self) -> None:
+        """A daily series skipping 25-26 December is correct, not defective."""
+        from datetime import date as _date
+
+        from meridian_marketdata.types import Candle
+
+        def daily(day: _date) -> Candle:
+            t = datetime(day.year, day.month, day.day, tzinfo=UTC)
+            return Candle(
+                instrument="EURUSD",
+                timeframe=Timeframe.D1,
+                open_time=t,
+                bid_open=Decimal("1.0850"),
+                bid_high=Decimal("1.0860"),
+                bid_low=Decimal("1.0840"),
+                bid_close=Decimal("1.0855"),
+                ask_open=Decimal("1.0851"),
+                ask_high=Decimal("1.0861"),
+                ask_low=Decimal("1.0841"),
+                ask_close=Decimal("1.0856"),
+            )
+
+        # Wed 24 Dec 2025 -> Fri 26 is skipped (holiday) -> Mon 29.
+        series = [daily(_date(2025, 12, d)) for d in (22, 23, 24, 29, 30, 31)]
+        report = assess_series(series, spec=SPEC, timeframe=Timeframe.D1, now=NOW)
+        missing = [i for i in report.issues if i.code == "MISSING_BARS"]
+        assert not missing, [i.detail for i in missing]

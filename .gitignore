@@ -91,6 +91,10 @@ obsidian-vault/09-Model-Insights/**
 .trash/
 obsidian-vault/**/*.backup-*
 
+# Third-party market data — not ours to redistribute, and regenerable.
+data/raw/**
+!data/raw/.gitkeep
+
 # ---------------------------------------------------------------------------
 # Logs and audit exports (audit source of truth is the database, not files)
 # ---------------------------------------------------------------------------

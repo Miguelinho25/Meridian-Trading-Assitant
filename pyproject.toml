@@ -33,6 +33,9 @@ quant = [
     "pyarrow>=18.0",
 ]
 postgres = ["asyncpg>=0.30", "psycopg[binary]>=3.2"]
+# Optional: historical data import. Yahoo data is for personal research use;
+# check its terms before relying on it for anything else.
+data = ["yfinance>=0.2.50"]
 dev = [
     "pytest>=8.3",
     "pytest-asyncio>=0.24",
@@ -84,7 +87,7 @@ select = ["E", "F", "W", "I", "N", "UP", "B", "A", "C4", "PT", "SIM", "RUF"]
 ignore = ["A003"]
 
 # "×" is intentional typography in operator-facing messages, not a mistyped "x".
-allowed-confusables = ["×", "—", "…"]
+allowed-confusables = ["×", "—", "–", "…"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S101"]

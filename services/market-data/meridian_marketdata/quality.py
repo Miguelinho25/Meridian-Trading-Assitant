@@ -16,6 +16,7 @@ from itertools import pairwise
 
 from meridian_schemas.enums import DataQualityVerdict, Timeframe
 
+from meridian_marketdata.holidays import is_market_holiday
 from meridian_marketdata.instruments import InstrumentSpec
 from meridian_marketdata.sessions import is_rollover, is_weekend
 from meridian_marketdata.types import Candle, Quote
@@ -41,13 +42,29 @@ class QualityReport:
 
     @property
     def blocks_trading(self) -> bool:
-        """Only OK permits new orders.
+        """Whether this data may be traded on **right now**.
 
-        DEGRADED is deliberately blocking too. A 'mostly fine' feed is precisely
-        the situation where a wrong fill is plausible enough to be missed, and the
-        cost of pausing is a missed trade rather than a bad one.
+        Only OK permits new orders. DEGRADED is deliberately blocking: a
+        'mostly fine' live feed is precisely the situation where a wrong fill is
+        plausible enough to be missed, and the cost of pausing is a missed trade
+        rather than a bad one.
         """
         return self.verdict is not DataQualityVerdict.OK
+
+    @property
+    def usable_for_research(self) -> bool:
+        """Whether this series may be backtested on.
+
+        A separate question from ``blocks_trading``, and conflating the two was a
+        real bug: sixteen years of genuine daily history containing a dozen
+        holiday gaps is entirely usable for research, but the live-trading rule
+        would reject it outright and permanently.
+
+        Only INVALID blocks here. DEGRADED is acceptable *provided the issues are
+        surfaced* — which is why every consumer is expected to display
+        ``issues`` alongside any result derived from the series.
+        """
+        return self.verdict is not DataQualityVerdict.INVALID
 
     @property
     def blocking_issues(self) -> tuple[QualityIssue, ...]:
@@ -146,12 +163,20 @@ def assess_series(
     if duplicates:
         issues.append(QualityIssue("DUPLICATE_BARS", f"{duplicates} duplicate timestamps"))
 
-    # Count only gaps the market should have filled. A weekend is not a gap.
+    # Count only gaps the market should have filled. Neither a weekend nor a
+    # global holiday is a gap — Easter, Christmas and New Year account for most
+    # absences in any genuine multi-year daily history, and counting them would
+    # make every real dataset look defective.
     missing = 0
     for previous, current in pairwise(bars):
         delta = current.open_time - previous.open_time
-        if delta > expected and not is_weekend(previous.open_time + expected):
-            missing += int(delta / expected) - 1
+        if delta <= expected:
+            continue
+        step = previous.open_time + expected
+        while step < current.open_time:
+            if not is_weekend(step) and not is_market_holiday(step.date()):
+                missing += 1
+            step += expected
     if missing:
         issues.append(
             QualityIssue(
