@@ -24,6 +24,7 @@ from meridian_schemas.enums import AuditEventType
 
 from meridian_api.health import router as health_router
 from meridian_api.middleware import RequestContextMiddleware
+from meridian_api.risk import router as risk_router
 
 log = get_logger(__name__)
 
@@ -106,6 +107,7 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(health_router)
+    app.include_router(risk_router)
     return app
 
 

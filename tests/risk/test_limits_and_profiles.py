@@ -10,7 +10,14 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 from meridian_config import limits as system_limits
 from meridian_config.settings import Mode, RiskProfileName
-from meridian_risk.limits import TIGHTEN_DIRECTION, LimitSet, Tighten, compose, require
+from meridian_risk.limits import (
+    TIGHTEN_DIRECTION,
+    LimitSet,
+    Tighten,
+    compose,
+    explain,
+    require,
+)
 from meridian_risk.profiles import (
     PROFILES,
     SYSTEM_LIMITS,
@@ -220,4 +227,127 @@ class TestDrawdownThrottle:
         assert (
             preservation.multiplier_at(at_25pct).risk_multiplier
             < challenge.multiplier_at(at_25pct).risk_multiplier
+        )
+
+
+# --- Provenance (Risk Lab) --------------------------------------------------
+
+_DECIMAL_FIELDS = tuple(
+    name
+    for name in TIGHTEN_DIRECTION
+    if name
+    not in {
+        "max_positions",
+        "max_trades_per_session",
+        "loss_streak_cooldown_after",
+        "news_buffer_minutes",
+    }
+)
+
+
+@st.composite
+def limit_sets(draw: st.DrawFn) -> LimitSet:
+    """Arbitrary partially-specified tiers, including all-None fields."""
+    values: dict[str, object] = {}
+    for name in TIGHTEN_DIRECTION:
+        if draw(st.booleans()):
+            continue  # this tier expresses no opinion
+        if name in _DECIMAL_FIELDS:
+            values[name] = draw(
+                st.decimals(min_value=Decimal("0.01"), max_value=Decimal("50"), places=2)
+            )
+        else:
+            values[name] = draw(st.integers(min_value=0, max_value=100))
+    return LimitSet(**values)  # type: ignore[arg-type]
+
+
+class TestExplainAgreesWithCompose:
+    """A Risk Lab showing a limit the engine does not enforce would be worse
+    than one showing nothing at all — it would be trusted."""
+
+    @given(a=limit_sets(), b=limit_sets(), c=limit_sets(), d=limit_sets())
+    @settings(max_examples=200, deadline=None)
+    def test_every_explained_value_matches_the_composed_one(
+        self, a: LimitSet, b: LimitSet, c: LimitSet, d: LimitSet
+    ) -> None:
+        composed = compose(a, b, c, d)
+        for origin in explain(system=a, account=b, profile=c, strategy=d):
+            assert origin.value == getattr(composed, origin.field_name), (
+                f"{origin.field_name}: Risk Lab would display {origin.value} "
+                f"while the engine enforces {getattr(composed, origin.field_name)}"
+            )
+
+    @given(a=limit_sets(), b=limit_sets())
+    @settings(max_examples=100, deadline=None)
+    def test_the_binding_tier_actually_holds_the_winning_value(
+        self, a: LimitSet, b: LimitSet
+    ) -> None:
+        tiers = {"system": a, "account": b}
+        for origin in explain(**tiers):
+            for name in origin.bound_by:
+                assert getattr(tiers[name], origin.field_name) == origin.value
+
+    def test_every_field_is_reported(self) -> None:
+        """A field silently missing from the Risk Lab is an unmonitored limit."""
+        reported = {o.field_name for o in explain(system=LimitSet())}
+        assert reported == set(TIGHTEN_DIRECTION)
+
+
+class TestExplainProvenance:
+    def test_the_tighter_ceiling_binds_and_is_named(self) -> None:
+        origins = {
+            o.field_name: o
+            for o in explain(
+                system=LimitSet(risk_per_trade_pct=Decimal("1.00")),
+                profile=LimitSet(risk_per_trade_pct=Decimal("0.35")),
+            )
+        }
+        risk = origins["risk_per_trade_pct"]
+        assert risk.value == Decimal("0.35")
+        assert risk.bound_by == ("profile",)
+        assert risk.was_tightened
+
+    def test_the_higher_floor_binds_for_a_floor_field(self) -> None:
+        origins = {
+            o.field_name: o
+            for o in explain(
+                system=LimitSet(min_reward_risk=Decimal("1.5")),
+                profile=LimitSet(min_reward_risk=Decimal("2.0")),
+            )
+        }
+        rr = origins["min_reward_risk"]
+        assert rr.value == Decimal("2.0")
+        assert rr.bound_by == ("profile",)
+        assert rr.direction is Tighten.HIGHER
+
+    def test_a_tie_names_every_holder_and_is_not_a_tightening(self) -> None:
+        origins = {
+            o.field_name: o
+            for o in explain(
+                system=LimitSet(max_positions=3),
+                account=LimitSet(max_positions=3),
+            )
+        }
+        assert origins["max_positions"].bound_by == ("system", "account")
+        assert not origins["max_positions"].was_tightened
+
+    def test_an_unset_limit_is_reported_as_unset(self) -> None:
+        origins = {o.field_name: o for o in explain(system=LimitSet())}
+        assert origins["max_positions"].is_unset
+        assert origins["max_positions"].bound_by == ()
+
+    def test_superseded_tier_values_remain_visible(self) -> None:
+        """The operator sees what was overridden, not just what won."""
+        origins = {
+            o.field_name: o
+            for o in explain(
+                system=LimitSet(risk_per_trade_pct=Decimal("2.00")),
+                account=LimitSet(),
+                profile=LimitSet(risk_per_trade_pct=Decimal("0.35")),
+            )
+        }
+        assert origins["risk_per_trade_pct"].tier_values == (
+            ("system", Decimal("2.00")),
+            ("account", None),
+            ("profile", Decimal("0.35")),
         )

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal
+from itertools import pairwise
 from typing import Final
 
 from meridian_config import limits as system_limits
@@ -248,6 +249,44 @@ SYSTEM_LIMITS: Final = LimitSet(
 )
 
 
+def _validate_throttle_curves() -> None:
+    """Selectivity must never loosen as drawdown deepens.
+
+    Run at import, over every profile.
+
+    The bands above the block threshold carry zero uplift because their risk
+    multiplier is zero: no trade can be sized, so the quality floors are dead
+    parameters. That is safe only while the multiplier stays at zero. Raising it
+    later to permit small trades would silently make the deepest band *less*
+    selective than the one above it — the curve would loosen at exactly the point
+    it resumed trading.
+
+    So the rule is conditional on the multiplier: among bands that permit
+    trading, uplifts must be non-decreasing. A future edit that reopens a blocked
+    band without setting its floors fails here rather than in production.
+    """
+    for name, profile in PROFILES.items():
+        trading = [b for b in profile.throttle if b.risk_multiplier > 0]
+        for shallower, deeper in pairwise(trading):
+            if deeper.risk_multiplier > shallower.risk_multiplier:
+                raise RuntimeError(
+                    f"{name}: risk multiplier rises from {shallower.risk_multiplier} to "
+                    f"{deeper.risk_multiplier} as drawdown deepens. The throttle must "
+                    f"only cut size."
+                )
+            for label, shallow_v, deep_v in (
+                ("confidence_uplift", shallower.confidence_uplift, deeper.confidence_uplift),
+                ("reward_risk_uplift", shallower.reward_risk_uplift, deeper.reward_risk_uplift),
+            ):
+                if deep_v < shallow_v:
+                    raise RuntimeError(
+                        f"{name}: {label} falls from {shallow_v} to {deep_v} between the "
+                        f"band at {shallower.from_consumed} and the deeper one at "
+                        f"{deeper.from_consumed}, both of which permit trading. "
+                        f"Selectivity must not loosen as drawdown deepens."
+                    )
+
+
 def get_profile(name: RiskProfileName) -> RiskProfile:
     if name is RiskProfileName.CUSTOM:
         return PROFILES[RiskProfileName.CHALLENGE]
@@ -259,3 +298,6 @@ def get_profile(name: RiskProfileName) -> RiskProfile:
 
 def profile_allows_mode(profile: RiskProfile, mode: Mode) -> bool:
     return mode in profile.allowed_modes
+
+
+_validate_throttle_curves()

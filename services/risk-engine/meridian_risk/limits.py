@@ -138,6 +138,71 @@ def compose(*tiers: LimitSet) -> LimitSet:
     return LimitSet(**result)  # type: ignore[arg-type]
 
 
+@dataclass(frozen=True, slots=True)
+class LimitOrigin:
+    """One effective limit and where it came from.
+
+    Composition answers *what* the limit is; the operator also needs *why*. A
+    Risk Lab that shows only the effective number cannot show that a tier
+    tightened it, which is the property the whole tier system exists to provide.
+    """
+
+    field_name: str
+    value: Decimal | int | None
+    direction: Tighten
+    #: Tiers holding the winning value. More than one means a tie, not a conflict.
+    bound_by: tuple[str, ...]
+    #: Every tier's value, in the order supplied. Shows what was superseded.
+    tier_values: tuple[tuple[str, Decimal | int | None], ...]
+
+    @property
+    def is_unset(self) -> bool:
+        """No tier expressed an opinion. ``require`` rejects rather than default."""
+        return self.value is None
+
+    @property
+    def was_tightened(self) -> bool:
+        """Whether any tier held a looser value that this one overrode."""
+        return sum(1 for _, v in self.tier_values if v is not None) > len(self.bound_by)
+
+
+def explain(**tiers: LimitSet) -> tuple[LimitOrigin, ...]:
+    """Compose, and report which tier bound each limit.
+
+    Keyword-only so every tier is named and the provenance is legible.
+
+    This must never disagree with :func:`compose`. A UI displaying a limit the
+    engine does not enforce would be worse than one displaying nothing, so a
+    property test asserts the two agree for every field on arbitrary inputs.
+    """
+    named = tuple(tiers.items())
+    origins: list[LimitOrigin] = []
+
+    for field_name, direction in TIGHTEN_DIRECTION.items():
+        pairs = tuple((name, getattr(tier, field_name)) for name, tier in named)
+        present = [(name, v) for name, v in pairs if v is not None]
+
+        if not present:
+            winner: Decimal | int | None = None
+            bound_by: tuple[str, ...] = ()
+        else:
+            pick = min if direction is Tighten.LOWER else max
+            winner = pick(v for _, v in present)
+            bound_by = tuple(name for name, v in present if v == winner)
+
+        origins.append(
+            LimitOrigin(
+                field_name=field_name,
+                value=winner,
+                direction=direction,
+                bound_by=bound_by,
+                tier_values=pairs,
+            )
+        )
+
+    return tuple(origins)
+
+
 def require(limits: LimitSet, field_name: str) -> Decimal | int:
     """Read a limit that must be present.
 

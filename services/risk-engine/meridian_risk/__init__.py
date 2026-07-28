@@ -33,7 +33,7 @@ from meridian_risk.forex import (
     pip_value_per_lot,
     stop_distance_pips,
 )
-from meridian_risk.limits import LimitSet, Tighten, compose
+from meridian_risk.limits import LimitOrigin, LimitSet, Tighten, compose, explain
 from meridian_risk.portfolio import PortfolioRiskEngine, SetEvaluation, rank_proposals
 from meridian_risk.profiles import PROFILES, RiskProfile, ThrottleBand, get_profile
 from meridian_risk.propfirm import (
@@ -58,6 +58,7 @@ __all__ = [
     "DecisionForgeryError",
     "DrawdownType",
     "ForexError",
+    "LimitOrigin",
     "LimitSet",
     "LossBasis",
     "MarketState",
@@ -82,6 +83,7 @@ __all__ = [
     "compose",
     "convert_quote_to_account",
     "evaluate_profile",
+    "explain",
     "get_profile",
     "loss_at_stop",
     "margin_required",
