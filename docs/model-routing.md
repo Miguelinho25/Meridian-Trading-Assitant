@@ -229,3 +229,47 @@ retrieval (exact and metadata filtering still work), drafted summaries.
 
 This is a tested configuration in CI, not merely an aspiration — it is the proof that
 the LLM is genuinely not the algorithm.
+
+## 8. Retrieval: what the embedding model can and cannot do
+
+Semantic retrieval was measured before being trusted, and the measurement changed the
+design. Three paraphrase queries were run against a seven-trade corpus plus unrelated
+prose, embedded with `nomic-embed-text`:
+
+| population | min | mean | max |
+| --- | --- | --- | --- |
+| same setup, paraphrased | 0.502 | 0.608 | 0.730 |
+| different setup | 0.387 | 0.490 | 0.585 |
+| unrelated prose | 0.293 | 0.357 | 0.407 |
+
+Two conclusions follow, and only the first is comfortable.
+
+**A relevance floor works.** The worst genuine match (0.502) sits clearly above the best
+unrelated one (0.407). `DEFAULT_MIN_RELEVANCE = 0.45` occupies that gap. It is derived
+from the table, not chosen for roundness, and it must be re-measured if the embedding
+model changes.
+
+**Ranking does not work.** The best *wrong-setup* match (0.585) outscored the worst
+*correct* one (0.502) — a separation of **-0.083**. The model separates trading text
+from non-trading text and very little beyond that. Ordering within a retrieved set is
+therefore not evidence that the top result is more comparable than the third.
+
+This is why metadata filtering is the primary retrieval mechanism and similarity is only
+a tie-break inside an already-relevant population. Instrument, direction, session,
+regime, strategy and outcome are exact and deterministic; cosine distance over free text
+is neither.
+
+### Consequences for the interface
+
+`RetrievalResult.narrowed_by_metadata` records whether any filter constrained the
+population. When it is false, `summary()` states that the set was selected by text
+similarity alone and should be treated as unverified.
+
+The UI must not present retrieved cases as a confidence-ranked list, must not describe
+the top result as "most similar" without that caveat, and must always show `sample_size`
+and realised outcomes alongside them. A panel reading "8 similar trades found" while
+concealing that six of them lost would invert the purpose of the feature.
+
+An earlier value of 0.60 was set from a single query that nearly duplicated its own
+document (0.83) and would have filtered out every genuine paraphrase, returning "no
+comparable cases" for every real query. One measurement is not a distribution.

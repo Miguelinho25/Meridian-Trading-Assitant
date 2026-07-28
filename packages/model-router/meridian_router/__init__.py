@@ -17,6 +17,19 @@ from meridian_router.critique import (
     parse_critique,
     wrap_untrusted,
 )
+from meridian_router.embeddings import (
+    CHUNK_VERSION,
+    EmbeddingError,
+    EmbeddingRecord,
+    EmbeddingService,
+    InMemoryVectorStore,
+    RetrievalFilter,
+    RetrievalResult,
+    SimilarityMatch,
+    VectorStore,
+    content_hash,
+    cosine_similarity,
+)
 from meridian_router.provider import (
     Invocation,
     ModelProvider,
@@ -47,6 +60,7 @@ from meridian_router.service import (
 )
 
 __all__ = [
+    "CHUNK_VERSION",
     "CLOUD_TASKS",
     "CRITIQUE_SCHEMA_PROMPT",
     "DEFAULT_MODELS",
@@ -57,6 +71,10 @@ __all__ = [
     "CritiqueRejectedError",
     "CritiqueRequest",
     "CritiqueService",
+    "EmbeddingError",
+    "EmbeddingRecord",
+    "EmbeddingService",
+    "InMemoryVectorStore",
     "Invocation",
     "ModelProvider",
     "ModelRegistry",
@@ -67,13 +85,19 @@ __all__ = [
     "Provider",
     "ProviderHealth",
     "ProviderResult",
+    "RetrievalFilter",
+    "RetrievalResult",
     "RoutingDecision",
     "RoutingError",
     "SimilarCaseRef",
+    "SimilarityMatch",
     "Task",
+    "VectorStore",
     "abstain",
     "build_prompt",
     "contains_injection",
+    "content_hash",
+    "cosine_similarity",
     "parse_critique",
     "prompt_hash",
     "wrap_untrusted",
