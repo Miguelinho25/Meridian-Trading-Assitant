@@ -81,6 +81,7 @@ exactly right in 2029, and the record of *why* it failed is itself research data
 ```python
 class StrategyPlugin(Protocol):
     manifest: StrategyManifest
+
     def generate(self, ctx: StrategyContext) -> Signal | NoAction: ...
 ```
 
@@ -90,13 +91,13 @@ about a strategy without running it:
 ```python
 @dataclass(frozen=True)
 class StrategyManifest:
-    id: str                      # stable, e.g. "ma-trend"
-    version: str                 # semver; every change is a new version
+    id: str  # stable, e.g. "ma-trend"
+    version: str  # semver; every change is a new version
     author: Literal["HUMAN", "AI", "ENSEMBLE"]
-    hypothesis: str              # what it believes and why — required, not optional
-    required_features: tuple[str, ...]      # validated against the registry
-    lookback_bars: int           # derived from features; warm-up and purge length
-    supported_instruments: tuple[str, ...] | None   # None = any
+    hypothesis: str  # what it believes and why — required, not optional
+    required_features: tuple[str, ...]  # validated against the registry
+    lookback_bars: int  # derived from features; warm-up and purge length
+    supported_instruments: tuple[str, ...] | None  # None = any
     supported_sessions: tuple[Session, ...] | None
     expected_regimes: tuple[str, ...] | None  # a PRIOR, never a filter — see §6
     max_signals_per_day: int
