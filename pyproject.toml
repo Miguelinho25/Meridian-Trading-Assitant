@@ -120,7 +120,8 @@ include_external_packages = true
 root_packages = [
     "meridian_config", "meridian_schemas", "meridian_db", "meridian_api",
     "meridian_marketdata", "meridian_features", "meridian_risk",
-    "meridian_vault", "meridian_router",
+    "meridian_vault", "meridian_router", "meridian_broker",
+    "meridian_backtest", "meridian_strategy",
 ]
 
 [[tool.importlinter.contracts]]
@@ -175,3 +176,41 @@ name = "Vault writes never touch persistence or the application layer"
 type = "forbidden"
 source_modules = ["meridian_vault"]
 forbidden_modules = ["meridian_db", "meridian_api"]
+
+# --- Safety principles as enforced structure -------------------------------
+# The three contracts below were added after an audit found the strategy,
+# broker and backtest packages had the correct dependency shape but nothing
+# enforcing it. Convention is not a control; each of these encodes a principle
+# from the brief that must fail at lint time rather than in review.
+
+[[tool.importlinter.contracts]]
+# Brief: "the risk engine has final authority and cannot be overridden by
+# prompts, models, strategies or UI controls." A strategy that could import the
+# risk engine could read or pre-empt its own sizing; one that could import the
+# broker could bypass it entirely. Strategies propose. Nothing else.
+name = "Strategies propose only — never size, execute, persist or call a model"
+type = "forbidden"
+source_modules = ["meridian_strategy"]
+forbidden_modules = [
+    "meridian_risk", "meridian_broker", "meridian_db",
+    "meridian_router", "meridian_api",
+]
+
+[[tool.importlinter.contracts]]
+# A model call inside the replay loop would make backtests irreproducible:
+# same seed, same data, different answer. Determinism is the property that
+# makes every validation statistic in docs/backtesting-methodology.md mean
+# anything, so the LLM layer must be unreachable from here.
+name = "Backtests stay deterministic — no model layer inside the replay loop"
+type = "forbidden"
+source_modules = ["meridian_backtest"]
+forbidden_modules = ["meridian_router", "meridian_api", "meridian_db"]
+
+[[tool.importlinter.contracts]]
+# Brief: "no language model may directly submit an order to a broker." The
+# router contract forbids that direction; this forbids the reverse, so there is
+# no path between the two regardless of which side initiates.
+name = "The broker is reachable only through risk — never from a model or strategy"
+type = "forbidden"
+source_modules = ["meridian_broker"]
+forbidden_modules = ["meridian_router", "meridian_api", "meridian_strategy"]

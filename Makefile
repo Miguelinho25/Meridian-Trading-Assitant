@@ -85,11 +85,17 @@ test-postgres: ## Run the suite against Postgres (needs MERIDIAN_TEST_POSTGRES_U
 		echo "MERIDIAN_TEST_POSTGRES_URL is unset — skipping."; exit 1; fi
 	$(PY) -m pytest tests/ -q
 
+# Every source root, and the reason the list is spelled out: `mypy packages apps`
+# silently excluded services/ — the risk engine, paper broker, backtest engine,
+# market data and feature pipeline went unchecked. tests/meta/test_type_coverage.py
+# fails if a source root or package is ever added without landing here.
+SOURCE_ROOTS := packages services apps
+
 .PHONY: lint
 lint: ## ruff + mypy + import boundaries
 	$(VENV)/bin/ruff check .
 	$(VENV)/bin/ruff format --check .
-	$(VENV)/bin/mypy packages apps
+	$(VENV)/bin/mypy $(SOURCE_ROOTS)
 
 .PHONY: format
 format: ## Apply formatting
