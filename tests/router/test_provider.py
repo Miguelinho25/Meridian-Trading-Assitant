@@ -1,4 +1,10 @@
-"""Provider behaviour. A model outage must never reach the trading loop."""
+"""Provider behaviour. A model outage must never reach the trading loop.
+
+NOTE: contains one deliberately secret-shaped string — a redaction test cannot be
+written without one. It is synthetic and non-functional. This path is excluded by
+exact name from `make secret-scan`; see SECRET_SCAN_EXCLUDES in the Makefile.
+Never put a real credential here.
+"""
 
 from __future__ import annotations
 

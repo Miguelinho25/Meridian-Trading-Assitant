@@ -105,10 +105,11 @@ audit-verify: ## Verify the audit hash chain
 	$(PY) -m meridian_db.verify
 
 # Redaction tests must contain secret-shaped strings in order to prove the
-# redactor removes them, so those two files are excluded by exact path. The
+# redactor removes them, so those files are excluded by exact path. The
 # exclusion is deliberately per-file, never a blanket tests/ exemption — a real
 # credential committed to any other test would still fail this scan.
-SECRET_SCAN_EXCLUDES := ':!tests/config/test_redaction.py' ':!tests/db/test_audit_chain.py'
+SECRET_SCAN_EXCLUDES := ':!tests/config/test_redaction.py' ':!tests/db/test_audit_chain.py' \
+                       ':!tests/router/test_provider.py'
 
 .PHONY: secret-scan
 secret-scan: ## Scan tracked content for credential patterns
