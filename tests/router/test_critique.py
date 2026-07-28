@@ -225,3 +225,27 @@ class TestBounds:
         assert result.confidence == Decimal("0.72")
         assert len(result.reasons) == 2
         assert result.is_advisory_only
+
+
+class TestDelimiterEcho:
+    """Observed with llama3.2:3b: it returned our own delimiters as reasons."""
+
+    def test_a_response_made_only_of_delimiters_abstains(self) -> None:
+        result = parse_critique(
+            valid(
+                decision="NEED_MORE_DATA",
+                reasons=["UNTRUSTED_JOURNAL_NOTE_BEGIN", "UNTRUSTED_JOURNAL_NOTE_END"],
+            )
+        )
+        assert result.decision is AICritiqueDecision.ABSTAIN
+        assert "DELIMITER_ECHO" in result.downgrade_reason
+
+    def test_delimiter_noise_is_stripped_from_real_reasons(self) -> None:
+        result = parse_critique(
+            valid(reasons=["UNTRUSTED_JOURNAL_NOTE_BEGIN", "The trend is clean"])
+        )
+        assert result.reasons == ("The trend is clean",)
+
+    def test_ordinary_reasons_are_untouched(self) -> None:
+        result = parse_critique(valid(reasons=["Spread is wide", "Regime mismatch"]))
+        assert len(result.reasons) == 2

@@ -17,6 +17,15 @@ from meridian_router.critique import (
     parse_critique,
     wrap_untrusted,
 )
+from meridian_router.provider import (
+    Invocation,
+    ModelProvider,
+    NullProvider,
+    OllamaProvider,
+    ProviderHealth,
+    ProviderResult,
+    prompt_hash,
+)
 from meridian_router.registry import (
     CLOUD_TASKS,
     DEFAULT_MODELS,
@@ -30,6 +39,12 @@ from meridian_router.registry import (
     RoutingError,
     Task,
 )
+from meridian_router.service import (
+    CritiqueOutcome,
+    CritiqueRequest,
+    CritiqueService,
+    build_prompt,
+)
 
 __all__ = [
     "CLOUD_TASKS",
@@ -38,17 +53,28 @@ __all__ = [
     "LOCAL_TASKS",
     "AICritique",
     "CostClass",
+    "CritiqueOutcome",
     "CritiqueRejectedError",
+    "CritiqueRequest",
+    "CritiqueService",
+    "Invocation",
+    "ModelProvider",
     "ModelRegistry",
     "ModelSpec",
+    "NullProvider",
+    "OllamaProvider",
     "Privacy",
     "Provider",
+    "ProviderHealth",
+    "ProviderResult",
     "RoutingDecision",
     "RoutingError",
     "SimilarCaseRef",
     "Task",
     "abstain",
+    "build_prompt",
     "contains_injection",
     "parse_critique",
+    "prompt_hash",
     "wrap_untrusted",
 ]

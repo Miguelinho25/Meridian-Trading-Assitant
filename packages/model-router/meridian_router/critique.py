@@ -37,6 +37,13 @@ _INJECTION_PATTERNS: Final[tuple[re.Pattern[str], ...]] = (
     re.compile(r"(?i)approve\s+this\s+trade\s+regardless"),
 )
 
+#: Our own untrusted-content delimiters. A model echoing these back has not
+#: understood the prompt's structure — it is reproducing scaffolding rather than
+#: analysing content, and its other fields are unlikely to be meaningful either.
+_DELIMITER_ECHO: Final[re.Pattern[str]] = re.compile(
+    r"(?i)<{0,3}UNTRUSTED_[A-Z_]*(BEGIN|END)>{0,3}"
+)
+
 #: Fields that must never appear in a model response. Their presence means the
 #: model is trying to act rather than advise.
 _FORBIDDEN_FIELDS: Final[frozenset[str]] = frozenset(
@@ -226,6 +233,17 @@ def parse_critique(
                 "Response echoed instruction-like content from retrieved material.",
                 code="INJECTION_ECHO",
             )
+
+    # Observed with llama3.2:3b on a real proposal: it returned our own
+    # UNTRUSTED_..._BEGIN/END markers as its reasons. Harmless, but it is
+    # scaffolding rather than analysis, and shipping it to the UI as a "reason"
+    # would be worse than showing nothing.
+    if reasons and all(_DELIMITER_ECHO.fullmatch(r.strip()) for r in reasons):
+        return abstain(
+            "Response reproduced the prompt's own delimiters instead of analysing the proposal.",
+            code="DELIMITER_ECHO",
+        )
+    reasons = tuple(r for r in reasons if not _DELIMITER_ECHO.fullmatch(r.strip()))
 
     # Citations must reference cases that were actually retrieved.
     cases: list[SimilarCaseRef] = []
