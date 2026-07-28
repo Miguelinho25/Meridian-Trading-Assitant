@@ -120,6 +120,7 @@ include_external_packages = true
 root_packages = [
     "meridian_config", "meridian_schemas", "meridian_db", "meridian_api",
     "meridian_marketdata", "meridian_features", "meridian_risk",
+    "meridian_vault", "meridian_router",
 ]
 
 [[tool.importlinter.contracts]]
@@ -153,10 +154,24 @@ type = "forbidden"
 source_modules = ["meridian_marketdata", "meridian_features"]
 forbidden_modules = ["meridian_api", "meridian_db"]
 
-# Uncomment with Stage F, when meridian_router exists. This is the contract that
-# makes "no LLM can reach the risk engine" structural rather than a promise.
-# [[tool.importlinter.contracts]]
-# name = "Risk engine is unreachable from the model router"
-# type = "forbidden"
-# source_modules = ["meridian_risk"]
-# forbidden_modules = ["meridian_router"]
+# --- Active from Stage F -------------------------------------------------
+# The contract that makes "no LLM can influence sizing" a property of the build
+# rather than a promise. Neither direction is permitted: the risk engine cannot
+# import the router, and the router cannot import the risk engine.
+[[tool.importlinter.contracts]]
+name = "Risk engine and model router cannot reach each other"
+type = "forbidden"
+source_modules = ["meridian_risk"]
+forbidden_modules = ["meridian_router"]
+
+[[tool.importlinter.contracts]]
+name = "Model router cannot reach the risk engine or the broker"
+type = "forbidden"
+source_modules = ["meridian_router"]
+forbidden_modules = ["meridian_risk", "meridian_broker", "meridian_db"]
+
+[[tool.importlinter.contracts]]
+name = "Vault writes never touch persistence or the application layer"
+type = "forbidden"
+source_modules = ["meridian_vault"]
+forbidden_modules = ["meridian_db", "meridian_api"]
