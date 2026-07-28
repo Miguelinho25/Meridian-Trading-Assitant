@@ -90,7 +90,7 @@ ignore = ["A003"]
 allowed-confusables = ["×", "—", "–", "…"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["S101"]
+"tests/*" = ["S101", "N801", "RUF012"]
 
 [tool.mypy]
 python_version = "3.12"
@@ -115,7 +115,12 @@ disallow_untyped_defs = false
 # packages land (Stage C and Stage F) — they encode the guarantee that no LLM
 # code path can reach the risk engine.
 [tool.importlinter]
-root_packages = ["meridian_config", "meridian_schemas", "meridian_db", "meridian_api"]
+# Needed to forbid external modules (httpx, socket) in the risk engine.
+include_external_packages = true
+root_packages = [
+    "meridian_config", "meridian_schemas", "meridian_db", "meridian_api",
+    "meridian_marketdata", "meridian_features", "meridian_risk",
+]
 
 [[tool.importlinter.contracts]]
 name = "Config is the lowest layer and depends on nothing internal"
@@ -135,15 +140,23 @@ type = "forbidden"
 source_modules = ["meridian_db"]
 forbidden_modules = ["meridian_api"]
 
-# --- Activate with Stage C (risk engine) ---------------------------------
+# --- Active from Stage C -------------------------------------------------
+[[tool.importlinter.contracts]]
+name = "Risk engine performs no I/O and never touches the database"
+type = "forbidden"
+source_modules = ["meridian_risk"]
+forbidden_modules = ["httpx", "requests", "socket", "urllib", "meridian_db", "meridian_api"]
+
+[[tool.importlinter.contracts]]
+name = "Market data and features never import the application or persistence layers"
+type = "forbidden"
+source_modules = ["meridian_marketdata", "meridian_features"]
+forbidden_modules = ["meridian_api", "meridian_db"]
+
+# Uncomment with Stage F, when meridian_router exists. This is the contract that
+# makes "no LLM can reach the risk engine" structural rather than a promise.
 # [[tool.importlinter.contracts]]
-# name = "Risk engine is unreachable from the model router (no LLM may touch risk)"
+# name = "Risk engine is unreachable from the model router"
 # type = "forbidden"
 # source_modules = ["meridian_risk"]
 # forbidden_modules = ["meridian_router"]
-#
-# [[tool.importlinter.contracts]]
-# name = "Risk engine performs no I/O"
-# type = "forbidden"
-# source_modules = ["meridian_risk"]
-# forbidden_modules = ["httpx", "requests", "socket", "urllib", "meridian_db"]
