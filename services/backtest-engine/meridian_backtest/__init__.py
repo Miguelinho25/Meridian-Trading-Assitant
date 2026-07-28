@@ -17,6 +17,16 @@ from meridian_backtest.metrics import (
     compute_metrics,
     sharpe_ratio,
 )
+from meridian_backtest.validation import (
+    MonteCarloResult,
+    StressResult,
+    StressScenario,
+    WalkForwardResult,
+    Window,
+    monte_carlo,
+    stress_test,
+    walk_forward,
+)
 
 __all__ = [
     "SUFFICIENCY_THRESHOLD",
@@ -28,6 +38,14 @@ __all__ = [
     "EquityPoint",
     "Flag",
     "Metrics",
+    "MonteCarloResult",
+    "StressResult",
+    "StressScenario",
+    "WalkForwardResult",
+    "Window",
     "compute_metrics",
+    "monte_carlo",
     "sharpe_ratio",
+    "stress_test",
+    "walk_forward",
 ]
