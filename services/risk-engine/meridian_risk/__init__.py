@@ -34,6 +34,7 @@ from meridian_risk.forex import (
     stop_distance_pips,
 )
 from meridian_risk.limits import LimitSet, Tighten, compose
+from meridian_risk.portfolio import PortfolioRiskEngine, SetEvaluation, rank_proposals
 from meridian_risk.profiles import PROFILES, RiskProfile, ThrottleBand, get_profile
 
 __all__ = [
@@ -46,12 +47,14 @@ __all__ = [
     "LimitSet",
     "MarketState",
     "OpenPosition",
+    "PortfolioRiskEngine",
     "PortfolioState",
     "RiskContext",
     "RiskDecision",
     "RiskEngine",
     "RiskProfile",
     "RuleOutcome",
+    "SetEvaluation",
     "SizingResult",
     "ThrottleBand",
     "Tighten",
@@ -63,5 +66,6 @@ __all__ = [
     "loss_at_stop",
     "margin_required",
     "pip_value_per_lot",
+    "rank_proposals",
     "stop_distance_pips",
 ]
