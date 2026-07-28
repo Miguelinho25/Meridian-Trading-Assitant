@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useSystemHealthContext } from "@/lib/SystemHealthContext";
 import { PRODUCT_NAME } from "@/config/product";
 import { RiskIndicator } from "./RiskIndicator";
@@ -8,7 +10,7 @@ const NAV = [
   { label: "Command Centre", href: "/", ready: true },
   { label: "Live Market", href: "/market", ready: false },
   { label: "Proposals", href: "/proposals", ready: false },
-  { label: "Risk Lab", href: "/risk", ready: false },
+  { label: "Risk Lab", href: "/risk", ready: true },
   { label: "Prop Firm", href: "/prop-firm", ready: false },
   { label: "Backtest Lab", href: "/backtest", ready: false },
   { label: "Strategy Lab", href: "/strategy", ready: false },
@@ -21,6 +23,7 @@ const NAV = [
 
 export function Shell({ children }: { children: React.ReactNode }) {
   const { health, failed } = useSystemHealthContext();
+  const pathname = usePathname();
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -37,25 +40,40 @@ export function Shell({ children }: { children: React.ReactNode }) {
             </span>
           </div>
           <ul className="flex flex-col">
-            {NAV.map((item) => (
-              <li key={item.href}>
-                <span
-                  className={`flex items-center justify-between px-5 py-2 text-[12.5px] ${
-                    item.ready
-                      ? "text-[var(--text-primary)]"
-                      : "cursor-not-allowed text-[var(--text-tertiary)]"
-                  }`}
-                  title={item.ready ? undefined : "Not built yet — later milestone stage"}
-                >
-                  {item.label}
-                  {!item.ready && (
-                    <span className="text-[9px] uppercase tracking-wider opacity-60">
-                      soon
+            {NAV.map((item) => {
+              const active = pathname === item.href;
+              const shared = `flex items-center justify-between px-5 py-2 text-[12.5px] ${
+                active
+                  ? "border-l-2 border-[var(--text-primary)] bg-[var(--surface-2)] pl-[18px] text-[var(--text-primary)]"
+                  : ""
+              }`;
+
+              // Unbuilt pages stay spans rather than dead links: a nav item that
+              // navigates to a 404 is worse than one that plainly says "soon".
+              return (
+                <li key={item.href}>
+                  {item.ready ? (
+                    <Link
+                      href={item.href}
+                      aria-current={active ? "page" : undefined}
+                      className={`${shared} text-[var(--text-primary)] hover:bg-[var(--surface-2)]`}
+                    >
+                      {item.label}
+                    </Link>
+                  ) : (
+                    <span
+                      className={`${shared} cursor-not-allowed text-[var(--text-tertiary)]`}
+                      title="Not built yet — later milestone stage"
+                    >
+                      {item.label}
+                      <span className="text-[9px] uppercase tracking-wider opacity-60">
+                        soon
+                      </span>
                     </span>
                   )}
-                </span>
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
         </nav>
 

@@ -135,3 +135,38 @@ class TestProfiles:
         profiles = {p["name"]: p for p in (await client.get("/api/risk/profiles")).json()}
         if "EXPERIMENTAL" in profiles:
             assert "live" not in profiles["EXPERIMENTAL"]["allowed_modes"]
+
+
+class TestTheHeaderAgreesWithTheRiskLab:
+    """The persistent banner and the Risk Lab must show the same number.
+
+    /health reported ``settings.max_risk_per_trade_pct`` — the raw system tier,
+    which is the loosest by construction. The always-visible header therefore
+    showed 1.00% while the CHALLENGE profile held the engine to 0.35%,
+    overstating permitted risk by nearly 3x on the one figure an operator sees
+    on every screen. No test covered the value, only its presence, which is how
+    it survived.
+    """
+
+    async def test_the_header_shows_the_effective_limit(self, client: AsyncClient) -> None:
+        header = (await client.get("/health")).json()["execution_safety"]
+        lab = (await client.get("/api/risk/limits")).json()
+        enforced = next(
+            row["value"] for row in lab["limits"] if row["field_name"] == "risk_per_trade_pct"
+        )
+        assert Decimal(header["max_risk_per_trade_pct"]) == Decimal(enforced)
+
+    async def test_the_header_is_not_the_raw_system_ceiling(self, client: AsyncClient) -> None:
+        """Pins the direction of the bug: under a profile that tightens
+        risk-per-trade, the header must move with the profile, not the setting."""
+        from meridian_config import get_settings
+
+        header = (await client.get("/health")).json()["execution_safety"]
+        shown = Decimal(header["max_risk_per_trade_pct"])
+        system_ceiling = SYSTEM_LIMITS.risk_per_trade_pct
+        assert system_ceiling is not None
+
+        profile_limit = get_profile(get_settings().risk_profile).limits.risk_per_trade_pct
+        if profile_limit is not None and profile_limit < system_ceiling:
+            assert shown == profile_limit
+            assert shown < system_ceiling

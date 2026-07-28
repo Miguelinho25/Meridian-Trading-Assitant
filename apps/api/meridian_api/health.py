@@ -8,11 +8,14 @@ it can place an order.
 
 from __future__ import annotations
 
+from decimal import Decimal
 from typing import Any, Literal
 
 from fastapi import APIRouter
 from meridian_config import PRODUCT_NAME, SAFETY_NOTICE, VERSION, get_settings, limits
 from meridian_db import chain_head, session_scope, verify_chain
+from meridian_risk import LimitSet, compose
+from meridian_risk.profiles import SYSTEM_LIMITS, get_profile
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import text
 
@@ -37,6 +40,13 @@ class ExecutionSafety(BaseModel):
     broker_execution_enabled: bool
     live_execution_implemented: bool
     kill_switch_engaged: bool
+    #: The limit the engine will actually enforce, after all four tiers compose.
+    #:
+    #: This previously reported ``settings.max_risk_per_trade_pct``, the raw
+    #: system ceiling. That is the *loosest* tier by construction, so the
+    #: persistent risk banner showed 1.00% while the CHALLENGE profile held the
+    #: engine to 0.35% — overstating permitted risk by nearly 3x, on the one
+    #: number an operator sees on every screen.
     max_risk_per_trade_pct: str
     notice: str
 
@@ -70,6 +80,28 @@ async def _database_health() -> tuple[ComponentHealth, ComponentHealth]:
             status="down", detail=f"CHAIN BROKEN at {verification.broken_at}: {verification.detail}"
         )
     return db, audit
+
+
+def effective_risk_per_trade() -> Decimal:
+    """The risk-per-trade limit after tier composition.
+
+    Shares its inputs with /api/risk/limits deliberately, and a test asserts the
+    two endpoints agree. An operator reading a smaller number in the Risk Lab
+    than in the always-visible header would have no way to know which binds.
+    """
+    settings = get_settings()
+    composed = compose(
+        SYSTEM_LIMITS, LimitSet(), get_profile(settings.risk_profile).limits, LimitSet()
+    )
+    value = composed.risk_per_trade_pct
+    # Fail loud rather than falling back to the looser setting: an unknown limit
+    # must never be presented as the permissive one.
+    if value is None:
+        raise RuntimeError(
+            "No tier defines risk_per_trade_pct. The header must not fall back to "
+            "the raw system setting, which is the loosest tier by construction."
+        )
+    return value
 
 
 @router.get("/health", response_model=HealthResponse, summary="System and safety state")
@@ -119,7 +151,7 @@ async def health() -> HealthResponse:
             broker_execution_enabled=settings.broker_execution_enabled,
             live_execution_implemented=limits.LIVE_EXECUTION_IMPLEMENTED,
             kill_switch_engaged=settings.kill_switch,
-            max_risk_per_trade_pct=str(settings.max_risk_per_trade_pct),
+            max_risk_per_trade_pct=str(effective_risk_per_trade()),
             notice=SAFETY_NOTICE,
         ),
         components=components,

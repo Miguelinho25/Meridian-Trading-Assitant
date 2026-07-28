@@ -73,6 +73,62 @@ async function request<T>(path: string, schema: z.ZodType<T>): Promise<T> {
   return parsed.data;
 }
 
+/**
+ * Limits arrive as strings and stay strings.
+ *
+ * Parsing "0.35" into a JS number would make it a float, and every subsequent
+ * render would be one rounding away from showing a risk limit that is not the
+ * one enforced. Nothing here does arithmetic on these values — they are
+ * displayed, compared as strings, and never recomputed client-side.
+ */
+export const tierValueSchema = z.object({
+  tier: z.string(),
+  value: z.string().nullable(),
+});
+
+export const effectiveLimitSchema = z.object({
+  field_name: z.string(),
+  value: z.string().nullable(),
+  tightens: z.enum(["LOWER", "HIGHER"]),
+  bound_by: z.array(z.string()),
+  tier_values: z.array(tierValueSchema),
+  was_tightened: z.boolean(),
+  unset: z.boolean(),
+});
+
+export const limitsSchema = z.object({
+  risk_profile: z.string(),
+  profile_description: z.string(),
+  mode: z.string(),
+  profile_allows_mode: z.boolean(),
+  limits: z.array(effectiveLimitSchema),
+  notice: z.string(),
+});
+
+export const throttleBandSchema = z.object({
+  from_consumed: z.string(),
+  to_consumed: z.string(),
+  risk_multiplier: z.string(),
+  confidence_uplift: z.string(),
+  reward_risk_uplift: z.string(),
+});
+
+export const profileSummarySchema = z.object({
+  name: z.string(),
+  description: z.string(),
+  recommended: z.boolean(),
+  allowed_modes: z.array(z.string()),
+  active: z.boolean(),
+});
+
+export type Limits = z.infer<typeof limitsSchema>;
+export type EffectiveLimit = z.infer<typeof effectiveLimitSchema>;
+export type ThrottleBand = z.infer<typeof throttleBandSchema>;
+export type ProfileSummary = z.infer<typeof profileSummarySchema>;
+
 export const api = {
   health: () => request("/health", healthSchema),
+  limits: () => request("/api/risk/limits", limitsSchema),
+  throttle: () => request("/api/risk/throttle", z.array(throttleBandSchema)),
+  profiles: () => request("/api/risk/profiles", z.array(profileSummarySchema)),
 };
