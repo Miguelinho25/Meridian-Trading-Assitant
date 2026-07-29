@@ -459,6 +459,17 @@ class BacktestTrade(Base):
     pnl: Mapped[Decimal | None] = mapped_column(DecimalText)
     r_multiple: Mapped[Decimal | None] = mapped_column(DecimalText)
     commission: Mapped[Decimal | None] = mapped_column(DecimalText)
+    #: The broker's own id, so a stored trade can be traced back to the run log.
+    trade_id: Mapped[str] = mapped_column(String(60), default="")
+    #: Maximum favourable and adverse excursion. How far a trade ran in each
+    #: direction before closing is research data the P&L alone destroys: a
+    #: winner that first went 3R against you is not the same trade as one that
+    #: never did, and stop placement is judged on exactly that difference.
+    mfe_pips: Mapped[Decimal | None] = mapped_column(DecimalText)
+    mae_pips: Mapped[Decimal | None] = mapped_column(DecimalText)
+    #: True when the bar could have hit both stop and target. The engine resolves
+    #: these stop-first; flagging them keeps the pessimism auditable.
+    ambiguous_exit: Mapped[bool] = mapped_column(Boolean, default=False)
     #: Session and regime at entry, for the conditional-performance analysis the
     #: platform is meant to discover rather than have hardcoded.
     session: Mapped[str] = mapped_column(String(20), default="")

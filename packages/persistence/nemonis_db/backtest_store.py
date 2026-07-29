@@ -73,6 +73,10 @@ class TradeRow:
     session: str = ""
     regime_label: str = ""
     strategy_key: str = ""
+    trade_id: str = ""
+    mfe_pips: Decimal | None = None
+    mae_pips: Decimal | None = None
+    ambiguous_exit: bool = False
 
 
 @dataclass(slots=True)
@@ -247,6 +251,10 @@ async def record_run(session: AsyncSession, record: RunRecord) -> str:
                 commission=trade.commission,
                 session=trade.session,
                 regime_label=trade.regime_label,
+                trade_id=trade.trade_id,
+                mfe_pips=trade.mfe_pips,
+                mae_pips=trade.mae_pips,
+                ambiguous_exit=trade.ambiguous_exit,
             )
         )
 
