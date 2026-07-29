@@ -62,6 +62,7 @@ where = [
     "services/risk-engine",
     "services/backtest-engine",
     "services/paper-broker",
+    "services/paper-trading",
     "services/journal-engine",
     "services/analytics-engine",
     "apps/api",
@@ -121,7 +122,7 @@ root_packages = [
     "nemonis_config", "nemonis_schemas", "nemonis_db", "nemonis_api",
     "nemonis_marketdata", "nemonis_features", "nemonis_risk",
     "nemonis_vault", "nemonis_router", "nemonis_broker",
-    "nemonis_backtest", "nemonis_strategy",
+    "nemonis_backtest", "nemonis_strategy", "nemonis_paper",
 ]
 
 [[tool.importlinter.contracts]]
