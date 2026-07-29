@@ -6,7 +6,7 @@ from datetime import UTC, date, datetime, time
 from decimal import Decimal
 
 import pytest
-from meridian_risk.propfirm import (
+from nemonis_risk.propfirm import (
     GENERIC_TWO_PHASE,
     DailyLossReference,
     DrawdownType,

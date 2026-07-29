@@ -1,4 +1,4 @@
-# Meridian — Obsidian Memory System
+# Ñemonis — Obsidian Memory System
 
 The vault is a **human-readable knowledge layer**, not a database. PostgreSQL holds all
 authoritative trade and account data. If the vault were deleted entirely, it could be
@@ -80,12 +80,12 @@ fragment guarantees uniqueness without depending on the human-readable part.
 
 ```yaml
 ---
-meridian_id: tr_01JQ8X4M2N
-meridian_type: trade
-meridian_generated_at: 2026-07-27T14:22:31Z
-meridian_content_hash: sha256:9f2c4b...
-meridian_schema: trade-note@1
-meridian_editable: [what_worked, what_failed, lesson, user_tags, screenshots]
+nemonis_id: tr_01JQ8X4M2N
+nemonis_type: trade
+nemonis_generated_at: 2026-07-27T14:22:31Z
+nemonis_content_hash: sha256:9f2c4b...
+nemonis_schema: trade-note@1
+nemonis_editable: [what_worked, what_failed, lesson, user_tags, screenshots]
 
 instrument: EURUSD
 direction: long
@@ -112,8 +112,8 @@ tags: [trade, eurusd, london, trend, loss]
 ---
 ```
 
-`meridian_editable` is the allowlist, written into the file itself so it is visible to
-the user and to the sync engine. `meridian_content_hash` covers generated content only,
+`nemonis_editable` is the allowlist, written into the file itself so it is visible to
+the user and to the sync engine. `nemonis_content_hash` covers generated content only,
 so user edits to permitted fields never trigger a false conflict. `synthetic: true`
 marks sample data — it propagates to every view so simulated performance can never be
 mistaken for real.
@@ -148,7 +148,7 @@ Backups are pruned on a retention policy, not left to grow unbounded.
 rollups. Idempotent: unchanged content produces no write, so file mtimes stay meaningful.
 
 **Vault → database** on a debounced filesystem watch. For each changed file: parse
-frontmatter, verify `meridian_id` exists, extract **only** allowlisted fields, validate
+frontmatter, verify `nemonis_id` exists, extract **only** allowlisted fields, validate
 types and lengths, scan for injection markers (§7), then write to `user_fields`.
 
 **Conflicts.** If a generated field was edited, the note is rewritten with the correct

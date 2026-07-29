@@ -1,4 +1,4 @@
-# Meridian — Model Routing
+# Ñemonis — Model Routing
 
 An LLM is never the trading algorithm. It analyses, retrieves, classifies, critiques
 and drafts. Numerical calculation, risk control and execution are deterministic code.
@@ -222,7 +222,7 @@ AI can stop a trade, never start one. That asymmetry is deliberate and permanent
 
 ## 7. No-LLM mode
 
-`MERIDIAN_OLLAMA_ENABLED=false` with no cloud keys is a fully supported configuration.
+`NEMONIS_OLLAMA_ENABLED=false` with no cloud keys is a fully supported configuration.
 Backtesting, replay, the risk engine, the paper broker, accounting, metrics, the vault
 and every dashboard work unchanged. Lost: AI critiques, auto-tagging, semantic
 retrieval (exact and metadata filtering still work), drafted summaries.

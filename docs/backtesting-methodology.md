@@ -1,4 +1,4 @@
-# Meridian — Backtesting Methodology
+# Ñemonis — Backtesting Methodology
 
 A backtest is a hypothesis test, not a demonstration. This document defines what the
 engine does, what claims the results support, and what claims they never support.

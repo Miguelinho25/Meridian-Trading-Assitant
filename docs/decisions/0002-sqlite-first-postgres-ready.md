@@ -36,7 +36,7 @@ Presented as a choice; the user selected **SQLite-first, Postgres-ready**.
   what makes the vertical slice's acceptance criteria actually achievable.
 - **Risk — dialect drift.** SQLite is permissive where Postgres is strict; code that
   works locally could fail on Postgres. **Mitigation:** the entire test suite runs
-  against Postgres whenever `MERIDIAN_TEST_POSTGRES_URL` is set, which CI will set. Any
+  against Postgres whenever `NEMONIS_TEST_POSTGRES_URL` is set, which CI will set. Any
   drift fails a test rather than surfacing later.
 - **Risk — concurrency.** SQLite's writer lock is unsuitable for concurrent workers.
   Acceptable for single-user local research; it is a real reason to move to Postgres
@@ -46,6 +46,6 @@ Presented as a choice; the user selected **SQLite-first, Postgres-ready**.
 
 ## Migration path
 
-Set `MERIDIAN_DATABASE_URL` to a Postgres URL, run `alembic upgrade head`, and the
+Set `NEMONIS_DATABASE_URL` to a Postgres URL, run `alembic upgrade head`, and the
 Postgres-conditional migration branches apply partitioning, native triggers and
 pgvector. No application code changes.

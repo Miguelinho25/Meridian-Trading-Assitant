@@ -5,8 +5,8 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
-from meridian_marketdata import Quote, SyntheticGenerator, assess_quote, assess_series, get_spec
-from meridian_schemas.enums import DataQualityVerdict, Timeframe
+from nemonis_marketdata import Quote, SyntheticGenerator, assess_quote, assess_series, get_spec
+from nemonis_schemas.enums import DataQualityVerdict, Timeframe
 
 NOW = datetime(2026, 7, 27, 12, 0, tzinfo=UTC)
 SPEC = get_spec("EURUSD")
@@ -172,7 +172,7 @@ class TestHolidayGapsAreNotDataFaults:
         """A daily series skipping 25-26 December is correct, not defective."""
         from datetime import date as _date
 
-        from meridian_marketdata.types import Candle
+        from nemonis_marketdata.types import Candle
 
         def daily(day: _date) -> Candle:
             t = datetime(day.year, day.month, day.day, tzinfo=UTC)

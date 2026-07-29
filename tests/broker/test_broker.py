@@ -8,13 +8,13 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 import pytest
-from meridian_broker.account import Account
-from meridian_broker.broker import AuthorisationError, PaperBroker
-from meridian_broker.fills import FillModel, SlippageModel
-from meridian_marketdata.instruments import WATCHLIST, get_spec
-from meridian_marketdata.types import Candle
-from meridian_risk.engine import RiskEngine
-from meridian_schemas.enums import Direction, OrderType, Timeframe
+from nemonis_broker.account import Account
+from nemonis_broker.broker import AuthorisationError, PaperBroker
+from nemonis_broker.fills import FillModel, SlippageModel
+from nemonis_marketdata.instruments import WATCHLIST, get_spec
+from nemonis_marketdata.types import Candle
+from nemonis_risk.engine import RiskEngine
+from nemonis_schemas.enums import Direction, OrderType, Timeframe
 
 from tests.risk.conftest import RATES, make_context
 

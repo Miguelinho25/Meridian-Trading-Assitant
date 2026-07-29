@@ -10,8 +10,8 @@ from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
-from meridian_db import Account, Instrument
-from meridian_schemas.identifiers import IdPrefix, new_id
+from nemonis_db import Account, Instrument
+from nemonis_schemas.identifiers import IdPrefix, new_id
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError, StatementError
 from sqlalchemy.ext.asyncio import AsyncSession

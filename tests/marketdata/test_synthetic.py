@@ -7,10 +7,10 @@ from decimal import Decimal
 from itertools import pairwise
 
 import pytest
-from meridian_marketdata.instruments import WATCHLIST, get_spec
-from meridian_marketdata.sessions import is_weekend, primary_session
-from meridian_marketdata.synthetic import SyntheticGenerator
-from meridian_schemas.enums import Session, Timeframe
+from nemonis_marketdata.instruments import WATCHLIST, get_spec
+from nemonis_marketdata.sessions import is_weekend, primary_session
+from nemonis_marketdata.synthetic import SyntheticGenerator
+from nemonis_schemas.enums import Session, Timeframe
 
 # A Monday, so generation starts in an open market.
 START = datetime(2026, 7, 27, 0, 0, tzinfo=UTC)

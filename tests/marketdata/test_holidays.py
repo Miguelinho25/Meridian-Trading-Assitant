@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
-from meridian_marketdata.holidays import (
+from nemonis_marketdata.holidays import (
     easter_sunday,
     expected_closures,
     holidays_between,

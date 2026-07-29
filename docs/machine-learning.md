@@ -1,4 +1,4 @@
-# Meridian — Machine Learning and Pattern Learning
+# Ñemonis — Machine Learning and Pattern Learning
 
 Where statistical learning fits, what it is allowed to do, and — more importantly —
 what it is not allowed to claim.
@@ -24,7 +24,7 @@ output may be wrong in ways that are hard to detect.
 | Rank retrieved historical cases | Bypass or influence the risk engine |
 
 The risk engine does not import the model layer, and the import-linter contract in
-`pyproject.toml` will enforce that the moment `meridian_ml` exists. A model's entire
+`pyproject.toml` will enforce that the moment `nemonis_ml` exists. A model's entire
 influence on the system is one number that feeds a confidence gate the risk engine
 already applies.
 

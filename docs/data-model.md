@@ -1,4 +1,4 @@
-# Meridian — Data Model
+# Ñemonis — Data Model
 
 PostgreSQL is the intended production source of truth. SQLite is the local-development
 backend. The schema is written dialect-neutral so one Alembic chain serves both; see
@@ -206,5 +206,5 @@ To keep one migration chain valid on both backends:
 | Upserts | SQLAlchemy `on_conflict_do_update` / `ON CONFLICT` — supported by both. |
 
 Test suites run against SQLite by default and against Postgres when
-`MERIDIAN_TEST_POSTGRES_URL` is set, so dialect drift surfaces in CI rather than in
+`NEMONIS_TEST_POSTGRES_URL` is set, so dialect drift surfaces in CI rather than in
 production.

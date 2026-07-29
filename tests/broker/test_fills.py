@@ -7,7 +7,7 @@ from decimal import Decimal
 from random import Random
 
 import pytest
-from meridian_broker.fills import (
+from nemonis_broker.fills import (
     FillModel,
     FillReason,
     SlippageModel,
@@ -17,9 +17,9 @@ from meridian_broker.fills import (
     fill_stop,
     resolve_exit,
 )
-from meridian_marketdata.instruments import get_spec
-from meridian_marketdata.types import Candle
-from meridian_schemas.enums import Direction, Timeframe
+from nemonis_marketdata.instruments import get_spec
+from nemonis_marketdata.types import Candle
+from nemonis_schemas.enums import Direction, Timeframe
 
 EURUSD = get_spec("EURUSD")
 T = datetime(2026, 7, 27, 10, 0, tzinfo=UTC)

@@ -1,4 +1,4 @@
-# Meridian — Security
+# Ñemonis — Security
 
 Threat model for a single-user local research platform holding market data, trading
 research and (eventually) broker credentials.

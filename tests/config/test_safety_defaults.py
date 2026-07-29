@@ -5,7 +5,7 @@ from __future__ import annotations
 from decimal import Decimal
 
 import pytest
-from meridian_config import (
+from nemonis_config import (
     ApprovalMode,
     ConfigurationError,
     Mode,

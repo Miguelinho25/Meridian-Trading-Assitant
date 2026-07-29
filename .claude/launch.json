@@ -2,20 +2,20 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "meridian-web",
+      "name": "nemonis-web",
       "runtimeExecutable": "sh",
       "runtimeArgs": [
         "-c",
-        "cd /Users/miguelangelmorettlum/Desktop/Meridian/apps/web && npm run dev"
+        "cd /Users/miguelangelmorettlum/Desktop/Nemonis/apps/web && npm run dev"
       ],
       "port": 3000
     },
     {
-      "name": "meridian-api",
+      "name": "nemonis-api",
       "runtimeExecutable": "sh",
       "runtimeArgs": [
         "-c",
-        "cd /Users/miguelangelmorettlum/Desktop/Meridian && .venv/bin/uvicorn meridian_api.app:app --reload --host 127.0.0.1 --port 8787"
+        "cd /Users/miguelangelmorettlum/Desktop/Nemonis && .venv/bin/uvicorn nemonis_api.app:app --reload --host 127.0.0.1 --port 8787"
       ],
       "port": 8787
     }

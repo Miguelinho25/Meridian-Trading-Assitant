@@ -6,13 +6,13 @@ from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
-from meridian_backtest import BacktestConfig
-from meridian_backtest.validation import monte_carlo, stress_test, walk_forward
-from meridian_broker.broker import ClosedTrade
-from meridian_broker.fills import FillModel, FillReason, SlippageModel
-from meridian_marketdata import SyntheticGenerator
-from meridian_risk.propfirm import GENERIC_TWO_PHASE
-from meridian_schemas.enums import Direction, ResultProvenance
+from nemonis_backtest import BacktestConfig
+from nemonis_backtest.validation import monte_carlo, stress_test, walk_forward
+from nemonis_broker.broker import ClosedTrade
+from nemonis_broker.fills import FillModel, FillReason, SlippageModel
+from nemonis_marketdata import SyntheticGenerator
+from nemonis_risk.propfirm import GENERIC_TWO_PHASE
+from nemonis_schemas.enums import Direction, ResultProvenance
 
 from tests.backtest.test_engine import make_engine
 

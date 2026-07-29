@@ -22,13 +22,13 @@ $(VENV):
 
 .PHONY: guard-env
 guard-env: ## Refuse to proceed if .env enables broker execution
-	@if [ -f .env ] && grep -qE '^MERIDIAN_BROKER_EXECUTION_ENABLED=true' .env; then \
-		echo "REFUSING: .env sets MERIDIAN_BROKER_EXECUTION_ENABLED=true."; \
+	@if [ -f .env ] && grep -qE '^NEMONIS_BROKER_EXECUTION_ENABLED=true' .env; then \
+		echo "REFUSING: .env sets NEMONIS_BROKER_EXECUTION_ENABLED=true."; \
 		echo "No broker adapter exists in this build (docs/architecture.md §9)."; \
 		exit 1; \
 	fi
-	@if [ -f .env ] && grep -qE '^MERIDIAN_MODE=broker' .env; then \
-		echo "REFUSING: .env sets MERIDIAN_MODE=broker, which is not implemented."; \
+	@if [ -f .env ] && grep -qE '^NEMONIS_MODE=broker' .env; then \
+		echo "REFUSING: .env sets NEMONIS_MODE=broker, which is not implemented."; \
 		exit 1; \
 	fi
 
@@ -52,14 +52,14 @@ migration: ## Autogenerate a migration: make migration M="description"
 
 .PHONY: reset-db
 reset-db: ## Delete the local database and rebuild it
-	rm -f var/meridian.db var/meridian.db-wal var/meridian.db-shm
+	rm -f var/nemonis.db var/nemonis.db-wal var/nemonis.db-shm
 	$(MAKE) migrate
 
 # --- Run ------------------------------------------------------------------
 
 .PHONY: dev
 dev: ## Start the API with reload
-	$(VENV)/bin/uvicorn meridian_api.app:app --reload --host 127.0.0.1 --port 8787
+	$(VENV)/bin/uvicorn nemonis_api.app:app --reload --host 127.0.0.1 --port 8787
 
 .PHONY: web
 web: ## Start the frontend
@@ -80,9 +80,9 @@ test-determinism: ## Replay-determinism tests
 	$(PY) -m pytest tests/ -q -m determinism
 
 .PHONY: test-postgres
-test-postgres: ## Run the suite against Postgres (needs MERIDIAN_TEST_POSTGRES_URL)
-	@if [ -z "$$MERIDIAN_TEST_POSTGRES_URL" ]; then \
-		echo "MERIDIAN_TEST_POSTGRES_URL is unset — skipping."; exit 1; fi
+test-postgres: ## Run the suite against Postgres (needs NEMONIS_TEST_POSTGRES_URL)
+	@if [ -z "$$NEMONIS_TEST_POSTGRES_URL" ]; then \
+		echo "NEMONIS_TEST_POSTGRES_URL is unset — skipping."; exit 1; fi
 	$(PY) -m pytest tests/ -q
 
 # Every source root, and the reason the list is spelled out: `mypy packages apps`
@@ -108,7 +108,7 @@ boundaries: ## Verify architectural import boundaries (ADR-0004)
 
 .PHONY: audit-verify
 audit-verify: ## Verify the audit hash chain
-	$(PY) -m meridian_db.verify
+	$(PY) -m nemonis_db.verify
 
 # Redaction tests must contain secret-shaped strings in order to prove the
 # redactor removes them, so those files are excluded by exact path. The

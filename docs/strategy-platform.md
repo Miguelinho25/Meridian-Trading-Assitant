@@ -1,6 +1,6 @@
-# Meridian — Multi-Strategy Platform
+# Ñemonis — Multi-Strategy Platform
 
-Meridian hosts many competing strategies rather than running one. Strategies are
+Ñemonis hosts many competing strategies rather than running one. Strategies are
 independent plugins that can be enabled, disabled, compared and retired without
 touching each other or the core.
 

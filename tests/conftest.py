@@ -4,8 +4,8 @@ from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 
 import pytest
-from meridian_config import FrozenClock, reset_settings_cache
-from meridian_db import Base, create_engine, create_session_factory
+from nemonis_config import FrozenClock, reset_settings_cache
+from nemonis_db import Base, create_engine, create_session_factory
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -13,12 +13,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 def _isolate_settings(monkeypatch: pytest.MonkeyPatch) -> None:
     """Stop a developer's real .env from changing test outcomes."""
     for var in (
-        "MERIDIAN_MODE",
-        "MERIDIAN_BROKER_EXECUTION_ENABLED",
-        "MERIDIAN_APPROVAL_MODE",
-        "MERIDIAN_RISK_PROFILE",
-        "MERIDIAN_MAX_RISK_PER_TRADE_PCT",
-        "MERIDIAN_KILL_SWITCH",
+        "NEMONIS_MODE",
+        "NEMONIS_BROKER_EXECUTION_ENABLED",
+        "NEMONIS_APPROVAL_MODE",
+        "NEMONIS_RISK_PROFILE",
+        "NEMONIS_MAX_RISK_PER_TRADE_PCT",
+        "NEMONIS_KILL_SWITCH",
     ):
         monkeypatch.delenv(var, raising=False)
     reset_settings_cache()

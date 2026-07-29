@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import replace
 
 import pytest
-from meridian_router.registry import (
+from nemonis_router.registry import (
     CLOUD_TASKS,
     DEFAULT_MODELS,
     LOCAL_TASKS,
@@ -203,7 +203,7 @@ class TestFallbackChains:
 
 class TestNoLLMMode:
     def test_every_task_degrades_cleanly_with_nothing_enabled(self) -> None:
-        """MERIDIAN_OLLAMA_ENABLED=false with no keys is a supported
+        """NEMONIS_OLLAMA_ENABLED=false with no keys is a supported
         configuration, not a broken one."""
         nothing = ModelRegistry(tuple(replace(m, enabled=False) for m in DEFAULT_MODELS))
         for task in Task:

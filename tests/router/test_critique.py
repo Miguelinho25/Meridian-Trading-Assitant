@@ -6,14 +6,14 @@ import json
 from decimal import Decimal
 
 import pytest
-from meridian_router.critique import (
+from nemonis_router.critique import (
     CRITIQUE_SCHEMA_PROMPT,
     AICritique,
     contains_injection,
     parse_critique,
     wrap_untrusted,
 )
-from meridian_schemas.enums import AICritiqueDecision
+from nemonis_schemas.enums import AICritiqueDecision
 
 
 def valid(**overrides) -> str:

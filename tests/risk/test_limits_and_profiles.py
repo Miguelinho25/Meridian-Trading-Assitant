@@ -8,9 +8,9 @@ from itertools import pairwise
 import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
-from meridian_config import limits as system_limits
-from meridian_config.settings import Mode, RiskProfileName
-from meridian_risk.limits import (
+from nemonis_config import limits as system_limits
+from nemonis_config.settings import Mode, RiskProfileName
+from nemonis_risk.limits import (
     TIGHTEN_DIRECTION,
     LimitSet,
     Tighten,
@@ -18,7 +18,7 @@ from meridian_risk.limits import (
     explain,
     require,
 )
-from meridian_risk.profiles import (
+from nemonis_risk.profiles import (
     PROFILES,
     SYSTEM_LIMITS,
     get_profile,

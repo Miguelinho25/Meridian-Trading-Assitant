@@ -1,15 +1,22 @@
-# Meridian — Architecture
+# Ñemonis — Architecture
 
-> **Product name.** `Meridian` is a placeholder. It appears in exactly three places:
-> `packages/config/product.py` (`PRODUCT_NAME`), `apps/web/config/product.ts`, and the
-> `MERIDIAN_` environment prefix. Renaming is a three-file change plus one env-var
-> rename. Do not scatter the name through the codebase.
+> **Product name.** The display name `Ñemonis` is defined in exactly two places:
+> `packages/config/nemonis_config/product.py` (`PRODUCT_NAME`) and
+> `apps/web/config/product.ts`. Everything else — Python packages (`nemonis_*`),
+> the `NEMONIS_` environment prefix, the database filename and the repository
+> path — uses the ASCII slug `nemonis`.
+>
+> That split is deliberate. Non-ASCII characters in import names, environment
+> variables and filesystem paths break tooling in ways that are tedious to
+> diagnose: editable installs bake absolute paths, CI runners vary in locale, and
+> a mis-encoded path surfaces as an unrelated import error. The Ñ belongs in text
+> a human reads, not in an identifier a machine resolves.
 
 ---
 
 ## 1. What this system is, and what it is not
 
-Meridian is a **forex research and risk-control platform** in which an LLM is one
+Ñemonis is a **forex research and risk-control platform** in which an LLM is one
 supervised, non-authoritative component.
 
 It **is**: a historical backtester, a paper-trading simulator, a deterministic risk
@@ -115,7 +122,7 @@ This buys three properties that are otherwise very hard to get:
 
 ## 4. Why look-ahead bias is structurally prevented, not merely documented
 
-Documenting "do not use future data" does not prevent it. Meridian makes the mistake
+Documenting "do not use future data" does not prevent it. Ñemonis makes the mistake
 raise an exception.
 
 The feature pipeline never receives a full price series. It receives a **`BarView`** —
@@ -145,7 +152,7 @@ common leak in retail backtesting; the engine's fill model forbids it (§6).
 ## 5. Risk-engine finality is structural
 
 "The risk engine cannot be overridden" is only true if there is no other code path to
-an order. Meridian enforces this with an **authorisation token bound to proposal
+an order. Ñemonis enforces this with an **authorisation token bound to proposal
 content**:
 
 ```mermaid
@@ -286,14 +293,14 @@ They inform a person. They do not gate an order. That placement is the whole poi
 
 ## 9. Why live trading is absent rather than disabled
 
-A disabled feature is one config change from being an enabled feature. Meridian
+A disabled feature is one config change from being an enabled feature. Ñemonis
 instead omits the capability:
 
 - No broker SDK is a dependency.
 - No credential fields exist in settings.
 - `BrokerAdapter` is defined as a **Protocol with one implementation: the paper
   broker.** There is no live implementation to point a flag at.
-- `MERIDIAN_MODE=broker` raises a startup error naming this document.
+- `NEMONIS_MODE=broker` raises a startup error naming this document.
 
 Adding live trading later is a deliberate, reviewable project — new dependency, new
 credential handling, new adapter, new tests, new audit surface. It is not a toggle, and

@@ -1,4 +1,4 @@
-# Meridian — Development
+# Ñemonis — Development
 
 > **Current state:** architecture and planning only. No application code exists yet.
 > The commands below describe the target from Milestone 1 onward and will not run until
@@ -24,7 +24,7 @@
 ## Setup (from Milestone 1)
 
 ```bash
-git clone <repo> && cd meridian
+git clone <repo> && cd nemonis
 cp .env.example .env          # defaults are safe: research mode, broker disabled
 
 make setup                    # venv + deps + npm install + alembic upgrade head
@@ -46,7 +46,7 @@ never can.
 | `make test` | Full suite |
 | `make test-risk` | Risk-engine tests only — run these before any risk change |
 | `make test-determinism` | Runs a fixed backtest twice, diffs the ledger |
-| `make test-postgres` | Suite against Postgres (needs `MERIDIAN_TEST_POSTGRES_URL`) |
+| `make test-postgres` | Suite against Postgres (needs `NEMONIS_TEST_POSTGRES_URL`) |
 | `make lint` | ruff + mypy + eslint + tsc --noEmit |
 | `make e2e` | Playwright |
 | `make backtest CONFIG=…` | Headless backtest |
@@ -90,7 +90,7 @@ no path from "it looked good in-sample" to paper deployment.
 ## Troubleshooting
 
 **Ollama slow or 500ing.** 8 GB machine. Check `ollama ps`; if a model larger than ~3 GB
-is loaded, unload it. The app is fully functional with `MERIDIAN_OLLAMA_ENABLED=false`.
+is loaded, unload it. The app is fully functional with `NEMONIS_OLLAMA_ENABLED=false`.
 
 **Determinism test failing.** Something read the wall clock, used an unseeded RNG, or
 iterated an unordered collection. Those three account for nearly every case.

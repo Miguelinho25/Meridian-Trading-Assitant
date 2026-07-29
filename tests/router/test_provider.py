@@ -14,17 +14,17 @@ from decimal import Decimal
 
 import httpx
 import pytest
-from meridian_router.provider import (
+from nemonis_router.provider import (
     NullProvider,
     OllamaProvider,
     ProviderResult,
     prompt_hash,
 )
-from meridian_router.registry import ModelRegistry, Task
-from meridian_router.service import CritiqueRequest, CritiqueService, build_prompt
-from meridian_schemas.enums import AICritiqueDecision
+from nemonis_router.registry import ModelRegistry, Task
+from nemonis_router.service import CritiqueRequest, CritiqueService, build_prompt
+from nemonis_schemas.enums import AICritiqueDecision
 
-LIVE = os.environ.get("MERIDIAN_TEST_OLLAMA") == "1"
+LIVE = os.environ.get("NEMONIS_TEST_OLLAMA") == "1"
 
 WORKER = ModelRegistry().get("local-worker")
 EMBED = ModelRegistry().get("local-embed")
@@ -293,7 +293,7 @@ class TestPromptConstruction:
         assert any("Ignore all previous" in e for e in request.journal_excerpts)
 
 
-@pytest.mark.skipif(not LIVE, reason="set MERIDIAN_TEST_OLLAMA=1 to run against Ollama")
+@pytest.mark.skipif(not LIVE, reason="set NEMONIS_TEST_OLLAMA=1 to run against Ollama")
 class TestAgainstRealOllama:
     """Exercised against the model actually installed on this machine."""
 

@@ -6,14 +6,14 @@ from dataclasses import replace
 from decimal import Decimal
 
 import pytest
-from meridian_config.settings import ApprovalMode, Mode, RiskProfileName
-from meridian_risk.context import OpenPosition, PortfolioState
-from meridian_risk.decision import (
+from nemonis_config.settings import ApprovalMode, Mode, RiskProfileName
+from nemonis_risk.context import OpenPosition, PortfolioState
+from nemonis_risk.decision import (
     DecisionForgeryError,
     RiskDecision,
 )
-from meridian_risk.engine import RiskEngine
-from meridian_schemas.enums import DataQualityVerdict, Direction, RejectionCode, RiskVerdict
+from nemonis_risk.engine import RiskEngine
+from nemonis_schemas.enums import DataQualityVerdict, Direction, RejectionCode, RiskVerdict
 
 from tests.risk.conftest import (
     good_quality,
@@ -105,7 +105,7 @@ class TestInvariantI1AndI8_Authorisation:
         )
 
     def test_authorisation_hash_changes_with_size(self, engine, ctx, now) -> None:
-        from meridian_risk.decision import build_decision
+        from nemonis_risk.decision import build_decision
 
         decision = engine.evaluate(ctx, evaluated_at=now)
         other = build_decision(

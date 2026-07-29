@@ -86,7 +86,7 @@ Vault writer (atomic, backup, traversal-safe) · templates · link generation ·
 with numpy backend · metadata-filtered retrieval · model registry and router · Ollama
 provider · structured critique with validation and injection defence.
 
-**Done when:** the full suite passes with `MERIDIAN_OLLAMA_ENABLED=false`; injection
+**Done when:** the full suite passes with `NEMONIS_OLLAMA_ENABLED=false`; injection
 fixtures are rejected; a malformed response degrades to `ABSTAIN`.
 
 ### Stage G — Interface

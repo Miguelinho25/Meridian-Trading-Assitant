@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 import pytest
-from meridian_broker.state_machine import (
+from nemonis_broker.state_machine import (
     TERMINAL_STATES,
     TRANSITIONS,
     IllegalTransitionError,
@@ -15,7 +15,7 @@ from meridian_broker.state_machine import (
     is_terminal,
     reachable_from,
 )
-from meridian_schemas.enums import OrderState
+from nemonis_schemas.enums import OrderState
 
 T = datetime(2026, 7, 27, 10, 0, tzinfo=UTC)
 

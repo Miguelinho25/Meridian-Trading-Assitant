@@ -9,7 +9,7 @@ from decimal import Decimal
 
 import httpx
 import pytest
-from meridian_router.embeddings import (
+from nemonis_router.embeddings import (
     CHUNK_VERSION,
     DEFAULT_MIN_RELEVANCE,
     SIMILARITY_RANKS_SETUPS_RELIABLY,
@@ -21,10 +21,10 @@ from meridian_router.embeddings import (
     content_hash,
     cosine_similarity,
 )
-from meridian_router.provider import NullProvider, OllamaProvider
-from meridian_router.registry import ModelRegistry
+from nemonis_router.provider import NullProvider, OllamaProvider
+from nemonis_router.registry import ModelRegistry
 
-LIVE = os.environ.get("MERIDIAN_TEST_OLLAMA") == "1"
+LIVE = os.environ.get("NEMONIS_TEST_OLLAMA") == "1"
 EMBED = ModelRegistry().get("local-embed")
 T = datetime(2026, 7, 27, tzinfo=UTC)
 
@@ -317,7 +317,7 @@ class TestServiceIntegration:
         assert result.matches[0].outcome_r == Decimal("1.5")
 
 
-@pytest.mark.skipif(not LIVE, reason="set MERIDIAN_TEST_OLLAMA=1 to run against Ollama")
+@pytest.mark.skipif(not LIVE, reason="set NEMONIS_TEST_OLLAMA=1 to run against Ollama")
 class TestAgainstRealEmbeddings:
     async def test_related_text_scores_above_unrelated(self) -> None:
         """The property the whole retrieval layer depends on."""

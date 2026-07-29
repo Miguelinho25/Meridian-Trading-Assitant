@@ -10,7 +10,7 @@ Makefile. Never put a real credential here.
 from __future__ import annotations
 
 import pytest
-from meridian_config.redaction import REDACTED, contains_secret, redact_mapping, redact_text
+from nemonis_config.redaction import REDACTED, contains_secret, redact_mapping, redact_text
 
 SECRETS = [
     "sk-abcdefghij0123456789ABCDEF",

@@ -7,8 +7,8 @@ from decimal import Decimal
 import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
-from meridian_marketdata.instruments import get_spec
-from meridian_risk.forex import (
+from nemonis_marketdata.instruments import get_spec
+from nemonis_risk.forex import (
     ConversionRoute,
     ForexError,
     calculate_position_size,
@@ -18,7 +18,7 @@ from meridian_risk.forex import (
     pip_value_per_lot,
     stop_distance_pips,
 )
-from meridian_schemas.enums import Direction, RejectionCode
+from nemonis_schemas.enums import Direction, RejectionCode
 
 pytestmark = pytest.mark.risk
 

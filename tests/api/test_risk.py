@@ -11,9 +11,9 @@ from decimal import Decimal
 from itertools import pairwise
 
 from httpx import AsyncClient
-from meridian_risk import LimitSet, compose
-from meridian_risk.limits import TIGHTEN_DIRECTION
-from meridian_risk.profiles import SYSTEM_LIMITS, get_profile
+from nemonis_risk import LimitSet, compose
+from nemonis_risk.limits import TIGHTEN_DIRECTION
+from nemonis_risk.profiles import SYSTEM_LIMITS, get_profile
 
 
 class TestEffectiveLimits:
@@ -159,7 +159,7 @@ class TestTheHeaderAgreesWithTheRiskLab:
     async def test_the_header_is_not_the_raw_system_ceiling(self, client: AsyncClient) -> None:
         """Pins the direction of the bug: under a profile that tightens
         risk-per-trade, the header must move with the profile, not the setting."""
-        from meridian_config import get_settings
+        from nemonis_config import get_settings
 
         header = (await client.get("/health")).json()["execution_safety"]
         shown = Decimal(header["max_risk_per_trade_pct"])

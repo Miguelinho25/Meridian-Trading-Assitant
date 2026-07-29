@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Import daily FX history from Yahoo Finance into Meridian's CSV format.
+"""Import daily FX history from Yahoo Finance into Ñemonis's CSV format.
 
     python scripts/import_yahoo.py --start 2010-01-01
     python scripts/import_yahoo.py --pairs EURUSD GBPUSD --start 2020-01-01
@@ -36,7 +36,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_OUT = REPO_ROOT / "data" / "raw"
 
-#: Meridian symbol -> Yahoo ticker.
+#: Ñemonis symbol -> Yahoo ticker.
 YAHOO_TICKERS: dict[str, str] = {
     "EURUSD": "EURUSD=X",
     "GBPUSD": "GBPUSD=X",

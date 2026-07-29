@@ -3,7 +3,7 @@ requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "meridian"
+name = "nemonis"
 version = "0.1.0"
 description = "Forex research, backtesting and risk-control platform"
 requires-python = ">=3.12"
@@ -48,7 +48,7 @@ dev = [
 
 # Each brief-mandated directory holds one underscore-named Python package.
 # `where` takes a list, so the hyphenated layout from the brief is preserved
-# while imports stay valid: `from meridian_config import settings`.
+# while imports stay valid: `from nemonis_config import settings`.
 [tool.setuptools.packages.find]
 where = [
     "packages/config",
@@ -71,11 +71,11 @@ where = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
-filterwarnings = ["error::DeprecationWarning:meridian_.*"]
+filterwarnings = ["error::DeprecationWarning:nemonis_.*"]
 markers = [
     "risk: risk-engine tests (must pass before any risk change)",
     "determinism: replay-determinism tests",
-    "postgres: requires MERIDIAN_TEST_POSTGRES_URL",
+    "postgres: requires NEMONIS_TEST_POSTGRES_URL",
 ]
 
 [tool.ruff]
@@ -118,42 +118,42 @@ disallow_untyped_defs = false
 # Needed to forbid external modules (httpx, socket) in the risk engine.
 include_external_packages = true
 root_packages = [
-    "meridian_config", "meridian_schemas", "meridian_db", "meridian_api",
-    "meridian_marketdata", "meridian_features", "meridian_risk",
-    "meridian_vault", "meridian_router", "meridian_broker",
-    "meridian_backtest", "meridian_strategy",
+    "nemonis_config", "nemonis_schemas", "nemonis_db", "nemonis_api",
+    "nemonis_marketdata", "nemonis_features", "nemonis_risk",
+    "nemonis_vault", "nemonis_router", "nemonis_broker",
+    "nemonis_backtest", "nemonis_strategy",
 ]
 
 [[tool.importlinter.contracts]]
 name = "Config is the lowest layer and depends on nothing internal"
 type = "forbidden"
-source_modules = ["meridian_config"]
-forbidden_modules = ["meridian_schemas", "meridian_db", "meridian_api"]
+source_modules = ["nemonis_config"]
+forbidden_modules = ["nemonis_schemas", "nemonis_db", "nemonis_api"]
 
 [[tool.importlinter.contracts]]
 name = "Schemas never depend on persistence or the application layer"
 type = "forbidden"
-source_modules = ["meridian_schemas"]
-forbidden_modules = ["meridian_db", "meridian_api"]
+source_modules = ["nemonis_schemas"]
+forbidden_modules = ["nemonis_db", "nemonis_api"]
 
 [[tool.importlinter.contracts]]
 name = "Persistence never imports the application layer"
 type = "forbidden"
-source_modules = ["meridian_db"]
-forbidden_modules = ["meridian_api"]
+source_modules = ["nemonis_db"]
+forbidden_modules = ["nemonis_api"]
 
 # --- Active from Stage C -------------------------------------------------
 [[tool.importlinter.contracts]]
 name = "Risk engine performs no I/O and never touches the database"
 type = "forbidden"
-source_modules = ["meridian_risk"]
-forbidden_modules = ["httpx", "requests", "socket", "urllib", "meridian_db", "meridian_api"]
+source_modules = ["nemonis_risk"]
+forbidden_modules = ["httpx", "requests", "socket", "urllib", "nemonis_db", "nemonis_api"]
 
 [[tool.importlinter.contracts]]
 name = "Market data and features never import the application or persistence layers"
 type = "forbidden"
-source_modules = ["meridian_marketdata", "meridian_features"]
-forbidden_modules = ["meridian_api", "meridian_db"]
+source_modules = ["nemonis_marketdata", "nemonis_features"]
+forbidden_modules = ["nemonis_api", "nemonis_db"]
 
 # --- Active from Stage F -------------------------------------------------
 # The contract that makes "no LLM can influence sizing" a property of the build
@@ -162,20 +162,20 @@ forbidden_modules = ["meridian_api", "meridian_db"]
 [[tool.importlinter.contracts]]
 name = "Risk engine and model router cannot reach each other"
 type = "forbidden"
-source_modules = ["meridian_risk"]
-forbidden_modules = ["meridian_router"]
+source_modules = ["nemonis_risk"]
+forbidden_modules = ["nemonis_router"]
 
 [[tool.importlinter.contracts]]
 name = "Model router cannot reach the risk engine or the broker"
 type = "forbidden"
-source_modules = ["meridian_router"]
-forbidden_modules = ["meridian_risk", "meridian_broker", "meridian_db"]
+source_modules = ["nemonis_router"]
+forbidden_modules = ["nemonis_risk", "nemonis_broker", "nemonis_db"]
 
 [[tool.importlinter.contracts]]
 name = "Vault writes never touch persistence or the application layer"
 type = "forbidden"
-source_modules = ["meridian_vault"]
-forbidden_modules = ["meridian_db", "meridian_api"]
+source_modules = ["nemonis_vault"]
+forbidden_modules = ["nemonis_db", "nemonis_api"]
 
 # --- Safety principles as enforced structure -------------------------------
 # The three contracts below were added after an audit found the strategy,
@@ -190,10 +190,10 @@ forbidden_modules = ["meridian_db", "meridian_api"]
 # broker could bypass it entirely. Strategies propose. Nothing else.
 name = "Strategies propose only — never size, execute, persist or call a model"
 type = "forbidden"
-source_modules = ["meridian_strategy"]
+source_modules = ["nemonis_strategy"]
 forbidden_modules = [
-    "meridian_risk", "meridian_broker", "meridian_db",
-    "meridian_router", "meridian_api",
+    "nemonis_risk", "nemonis_broker", "nemonis_db",
+    "nemonis_router", "nemonis_api",
 ]
 
 [[tool.importlinter.contracts]]
@@ -203,8 +203,8 @@ forbidden_modules = [
 # anything, so the LLM layer must be unreachable from here.
 name = "Backtests stay deterministic — no model layer inside the replay loop"
 type = "forbidden"
-source_modules = ["meridian_backtest"]
-forbidden_modules = ["meridian_router", "meridian_api", "meridian_db"]
+source_modules = ["nemonis_backtest"]
+forbidden_modules = ["nemonis_router", "nemonis_api", "nemonis_db"]
 
 [[tool.importlinter.contracts]]
 # Brief: "no language model may directly submit an order to a broker." The
@@ -212,5 +212,5 @@ forbidden_modules = ["meridian_router", "meridian_api", "meridian_db"]
 # no path between the two regardless of which side initiates.
 name = "The broker is reachable only through risk — never from a model or strategy"
 type = "forbidden"
-source_modules = ["meridian_broker"]
-forbidden_modules = ["meridian_router", "meridian_api", "meridian_strategy"]
+source_modules = ["nemonis_broker"]
+forbidden_modules = ["nemonis_router", "nemonis_api", "nemonis_strategy"]

@@ -6,7 +6,7 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 import pytest
-from meridian_features import (
+from nemonis_features import (
     FEATURES,
     MAX_LOOKBACK,
     FeatureStoreError,
@@ -16,8 +16,8 @@ from meridian_features import (
     get_feature,
     required_lookback,
 )
-from meridian_marketdata import BarView, SyntheticGenerator
-from meridian_schemas.enums import Timeframe
+from nemonis_marketdata import BarView, SyntheticGenerator
+from nemonis_schemas.enums import Timeframe
 
 START = datetime(2026, 7, 27, 0, 0, tzinfo=UTC)
 NOW = datetime(2026, 7, 28, 0, 0, tzinfo=UTC)

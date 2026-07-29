@@ -6,11 +6,11 @@ from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
-from meridian_broker.broker import ClosedTrade
-from meridian_broker.fills import FillReason
-from meridian_marketdata.instruments import get_spec
-from meridian_schemas.enums import Direction
-from meridian_vault.notes import (
+from nemonis_broker.broker import ClosedTrade
+from nemonis_broker.fills import FillReason
+from nemonis_marketdata.instruments import get_spec
+from nemonis_schemas.enums import Direction
+from nemonis_vault.notes import (
     TRADE_EDITABLE_FIELDS,
     detect_conflicts,
     extract_user_fields,
@@ -19,7 +19,7 @@ from meridian_vault.notes import (
     render_trade_note,
     trade_note_filename,
 )
-from meridian_vault.writer import VaultError, VaultWriter, slugify
+from nemonis_vault.writer import VaultError, VaultWriter, slugify
 
 T = datetime(2026, 7, 27, 14, 30, tzinfo=UTC)
 EURUSD = get_spec("EURUSD")
@@ -145,14 +145,14 @@ class TestTradeNotes:
     def test_frontmatter_is_machine_readable(self) -> None:
         note = render_trade_note(a_trade(), spec=EURUSD, generated_at=T)
         parsed = parse_note(note)
-        assert parsed.frontmatter["meridian_type"] == "trade"
+        assert parsed.frontmatter["nemonis_type"] == "trade"
         assert parsed.frontmatter["instrument"] == "EURUSD"
-        assert parsed.frontmatter["meridian_schema"] == "trade-note@1"
+        assert parsed.frontmatter["nemonis_schema"] == "trade-note@1"
 
     def test_the_editable_allowlist_is_published_in_the_note(self) -> None:
         """Visible to the reader and to the sync engine alike."""
         parsed = parse_note(render_trade_note(a_trade(), spec=EURUSD, generated_at=T))
-        assert set(parsed.frontmatter["meridian_editable"]) == set(TRADE_EDITABLE_FIELDS)
+        assert set(parsed.frontmatter["nemonis_editable"]) == set(TRADE_EDITABLE_FIELDS)
 
     def test_synthetic_flag_propagates(self) -> None:
         """So simulated performance is never mistaken for real in any view."""
@@ -203,14 +203,14 @@ class TestUserFieldsAreTheOnlyWayBack:
 
     def test_an_edit_to_a_generated_field_is_detected(self) -> None:
         note = render_trade_note(a_trade(), spec=EURUSD, generated_at=T)
-        original_hash = str(parse_note(note).frontmatter["meridian_content_hash"])
+        original_hash = str(parse_note(note).frontmatter["nemonis_content_hash"])
 
         # The stored value is quoted, because it contains a colon. Matching the
         # unquoted form made an earlier version of this test replace nothing and
         # then find no conflict — a mutation test must confirm its mutation landed.
         tampered = note.replace(original_hash, "sha256:0000deadbeef")
         assert tampered != note, "tamper did not apply; the test would prove nothing"
-        assert parse_note(tampered).frontmatter["meridian_content_hash"] != original_hash
+        assert parse_note(tampered).frontmatter["nemonis_content_hash"] != original_hash
 
         assert detect_conflicts(tampered, original_hash)
 
@@ -219,7 +219,7 @@ class TestUserFieldsAreTheOnlyWayBack:
         note = render_trade_note(a_trade(), spec=EURUSD, generated_at=T)
         parsed = parse_note(note)
         edited = note.replace("**Lesson:** ", "**Lesson:** Wait for confirmation.")
-        assert not detect_conflicts(edited, str(parsed.frontmatter["meridian_content_hash"]))
+        assert not detect_conflicts(edited, str(parsed.frontmatter["nemonis_content_hash"]))
 
 
 class TestParserTolerance:

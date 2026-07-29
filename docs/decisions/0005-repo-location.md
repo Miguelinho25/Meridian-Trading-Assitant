@@ -21,7 +21,7 @@ project directory, never a repository spanning unrelated work.
 
 ## Decision
 
-The repository is a self-contained git repo at `~/Desktop/Meridian`, separate from
+The repository is a self-contained git repo at `~/Desktop/Nemonis`, separate from
 `~/Desktop` itself, developed on branch `build/foundation-vertical-slice`.
 
 `.gitignore` and `.env.example` were written **before** `git init` and the first commit,
@@ -31,6 +31,6 @@ initial commit was verified clean by a secret-pattern scan over staged content.
 ## Consequence
 
 Nothing outside the repository directory is read, modified or tracked. Any pre-existing
-personal Obsidian vault on the machine is **not** touched — Meridian generates into its
-own in-repo vault, and `MERIDIAN_VAULT_PATH` is configurable if it should ever point
+personal Obsidian vault on the machine is **not** touched — Ñemonis generates into its
+own in-repo vault, and `NEMONIS_VAULT_PATH` is configurable if it should ever point
 elsewhere deliberately.

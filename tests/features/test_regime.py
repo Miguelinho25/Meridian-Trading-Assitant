@@ -6,14 +6,14 @@ from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
-from meridian_features.regime import (
+from nemonis_features.regime import (
     CLASSIFIER_VERSION,
     RegimeClassifier,
     RuleBasedRegimeClassifier,
     TrendState,
     VolatilityState,
 )
-from meridian_marketdata import BarView, SyntheticGenerator
+from nemonis_marketdata import BarView, SyntheticGenerator
 
 START = datetime(2026, 7, 27, 0, 0, tzinfo=UTC)
 

@@ -23,11 +23,11 @@ SOURCE_ROOTS = ("packages", "services", "apps")
 
 
 def package_dirs() -> list[Path]:
-    """Every importable meridian_* package in the monorepo."""
+    """Every importable nemonis_* package in the monorepo."""
     return sorted(
         d
         for root in SOURCE_ROOTS
-        for d in (REPO / root).glob("*/meridian_*")
+        for d in (REPO / root).glob("*/nemonis_*")
         if d.is_dir() and (d / "__init__.py").exists()
     )
 

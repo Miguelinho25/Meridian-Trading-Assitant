@@ -1,14 +1,22 @@
-# Meridian
+# Ñemonis
 
 A forex research, backtesting and risk-control platform in which an LLM is one
 supervised, non-authoritative component.
 
-> **Status: architecture and planning. No application code exists yet.**
-> This repository currently contains the design, the decision record and the milestone
-> plan. Implementation begins at [Milestone 1](docs/milestone-1.md).
-
-> `Meridian` is a placeholder name, confined to three files so it can be replaced
-> globally in minutes.
+> **Status: engine complete, interface in progress.**
+>
+> The deterministic core is built and tested — market data and point-in-time
+> features, the risk engine, the order state machine and paper broker, the
+> backtest engine with its validation suite, the strategy plugin platform, and
+> the model router with retrieval. 731 tests, 11 enforced architectural
+> boundaries. The interface is being built now; several pages are still marked
+> "soon" in the navigation.
+>
+> **No strategy in this repository has passed validation.** The first end-to-end
+> backtest over 2010–2026 returned an expectancy whose 95% confidence interval
+> straddles zero, an 18% prop-firm pass probability, and negative results under
+> every stress scenario. That is recorded rather than hidden, because a platform
+> that cannot report a negative verdict is not a research platform.
 
 ---
 
@@ -19,7 +27,7 @@ setting:
 
 - No broker SDK is a dependency. No credential fields exist. No live adapter is written.
 - `BrokerAdapter` has exactly one implementation: the paper broker.
-- `MERIDIAN_MODE=broker` fails at startup.
+- `NEMONIS_MODE=broker` fails at startup.
 - Defaults are research mode, paper trading, broker execution disabled,
   manual approval.
 

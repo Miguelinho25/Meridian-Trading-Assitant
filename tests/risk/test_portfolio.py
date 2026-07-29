@@ -6,8 +6,8 @@ import random
 from decimal import Decimal
 
 import pytest
-from meridian_risk.portfolio import PortfolioRiskEngine, rank_proposals
-from meridian_schemas.enums import RejectionCode
+from nemonis_risk.portfolio import PortfolioRiskEngine, rank_proposals
+from nemonis_schemas.enums import RejectionCode
 
 from tests.risk.conftest import make_context, make_market, make_proposal
 
@@ -171,7 +171,7 @@ class TestEdgeCases:
         assert result.total_approved_risk_pct == Decimal(0)
 
     def test_single_proposal_matches_solo_evaluation(self, portfolio_engine, now) -> None:
-        from meridian_risk.engine import RiskEngine
+        from nemonis_risk.engine import RiskEngine
 
         ctx = ctx_for("solo")
         as_set = portfolio_engine.evaluate_set([ctx], evaluated_at=now).decisions[0]

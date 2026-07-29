@@ -7,17 +7,17 @@ from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
-from meridian_features import DEFAULT_CLASSIFIER
-from meridian_marketdata import BarView, SyntheticGenerator
-from meridian_schemas.enums import Direction, Session
-from meridian_strategy.plugin import (
+from nemonis_features import DEFAULT_CLASSIFIER
+from nemonis_marketdata import BarView, SyntheticGenerator
+from nemonis_schemas.enums import Direction, Session
+from nemonis_strategy.plugin import (
     LifecycleStatus,
     NoAction,
     Signal,
     StrategyContext,
     StrategyManifest,
 )
-from meridian_strategy.registry import RegistryError, StrategyRegistry, signals_from
+from nemonis_strategy.registry import RegistryError, StrategyRegistry, signals_from
 
 START = datetime(2026, 7, 27, tzinfo=UTC)
 

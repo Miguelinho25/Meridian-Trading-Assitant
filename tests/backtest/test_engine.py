@@ -6,14 +6,14 @@ from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
-from meridian_backtest import BacktestConfig, BacktestEngine, compute_metrics
-from meridian_backtest.metrics import SUPPRESSION_THRESHOLD, BiasFlag
-from meridian_broker.fills import FillModel, SlippageModel
-from meridian_marketdata import SyntheticGenerator
-from meridian_marketdata.instruments import WATCHLIST
-from meridian_risk.propfirm import GENERIC_TWO_PHASE
-from meridian_schemas.enums import ResultProvenance
-from meridian_strategy import (
+from nemonis_backtest import BacktestConfig, BacktestEngine, compute_metrics
+from nemonis_backtest.metrics import SUPPRESSION_THRESHOLD, BiasFlag
+from nemonis_broker.fills import FillModel, SlippageModel
+from nemonis_marketdata import SyntheticGenerator
+from nemonis_marketdata.instruments import WATCHLIST
+from nemonis_risk.propfirm import GENERIC_TWO_PHASE
+from nemonis_schemas.enums import ResultProvenance
+from nemonis_strategy import (
     LifecycleStatus,
     MovingAverageTrend,
     StrategyRegistry,
@@ -172,9 +172,9 @@ class TestBiasFlagsFireOnRiggedFixtures:
     """Stage E done-criterion: the flags must actually catch what they claim."""
 
     def _fake_trades(self, n: int, *, win_rate: float, instrument: str = "EURUSD"):
-        from meridian_broker.broker import ClosedTrade
-        from meridian_broker.fills import FillReason
-        from meridian_schemas.enums import Direction
+        from nemonis_broker.broker import ClosedTrade
+        from nemonis_broker.fills import FillReason
+        from nemonis_schemas.enums import Direction
 
         trades = []
         for i in range(n):
@@ -225,9 +225,9 @@ class TestBiasFlagsFireOnRiggedFixtures:
         the tests above would prove nothing."""
         trades = []
         for i, sym in enumerate(["EURUSD", "GBPUSD", "USDJPY", "AUDUSD"] * 40):
-            from meridian_broker.broker import ClosedTrade
-            from meridian_broker.fills import FillReason
-            from meridian_schemas.enums import Direction
+            from nemonis_broker.broker import ClosedTrade
+            from nemonis_broker.fills import FillReason
+            from nemonis_schemas.enums import Direction
 
             trades.append(
                 ClosedTrade(
@@ -255,9 +255,9 @@ class TestBiasFlagsFireOnRiggedFixtures:
 
 class TestMetricsQuality:
     def test_expectancy_interval_is_reported(self) -> None:
-        from meridian_broker.broker import ClosedTrade
-        from meridian_broker.fills import FillReason
-        from meridian_schemas.enums import Direction
+        from nemonis_broker.broker import ClosedTrade
+        from nemonis_broker.fills import FillReason
+        from nemonis_schemas.enums import Direction
 
         trades = [
             ClosedTrade(
@@ -284,9 +284,9 @@ class TestMetricsQuality:
         assert low <= metrics.expectancy <= high
 
     def test_interval_is_reproducible(self) -> None:
-        from meridian_broker.broker import ClosedTrade
-        from meridian_broker.fills import FillReason
-        from meridian_schemas.enums import Direction
+        from nemonis_broker.broker import ClosedTrade
+        from nemonis_broker.fills import FillReason
+        from nemonis_schemas.enums import Direction
 
         trades = [
             ClosedTrade(

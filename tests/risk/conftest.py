@@ -4,17 +4,17 @@ from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
-from meridian_config.settings import ApprovalMode, Mode, RiskProfileName
-from meridian_marketdata.instruments import WATCHLIST, get_spec
-from meridian_marketdata.quality import QualityReport
-from meridian_risk.context import (
+from nemonis_config.settings import ApprovalMode, Mode, RiskProfileName
+from nemonis_marketdata.instruments import WATCHLIST, get_spec
+from nemonis_marketdata.quality import QualityReport
+from nemonis_risk.context import (
     AccountState,
     MarketState,
     PortfolioState,
     RiskContext,
     TradeProposal,
 )
-from meridian_schemas.enums import DataQualityVerdict, Direction, Session
+from nemonis_schemas.enums import DataQualityVerdict, Direction, Session
 
 NOW = datetime(2026, 7, 27, 10, 0, tzinfo=UTC)
 

@@ -7,10 +7,10 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 import pytest
-from meridian_marketdata.provider import MarketDataProvider
-from meridian_marketdata.providers import FileProvider, ReplayProvider, SyntheticProvider
-from meridian_marketdata.types import MarketDataError
-from meridian_schemas.enums import Timeframe
+from nemonis_marketdata.provider import MarketDataProvider
+from nemonis_marketdata.providers import FileProvider, ReplayProvider, SyntheticProvider
+from nemonis_marketdata.types import MarketDataError
+from nemonis_schemas.enums import Timeframe
 
 START = datetime(2026, 7, 27, 0, 0, tzinfo=UTC)
 

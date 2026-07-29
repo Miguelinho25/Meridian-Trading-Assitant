@@ -5,16 +5,16 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 
 import pytest
-from meridian_config import FrozenClock
-from meridian_db import (
+from nemonis_config import FrozenClock
+from nemonis_db import (
     GENESIS_HASH,
     AppendOnlyViolationError,
     append_event,
     chain_head,
     verify_chain,
 )
-from meridian_db.audit import canonical_json, compute_hash
-from meridian_schemas.enums import AuditEventType
+from nemonis_db.audit import canonical_json, compute_hash
+from nemonis_schemas.enums import AuditEventType
 from sqlalchemy import text
 from sqlalchemy.exc import StatementError
 from sqlalchemy.ext.asyncio import AsyncSession

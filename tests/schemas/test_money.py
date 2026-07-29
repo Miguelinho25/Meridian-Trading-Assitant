@@ -7,7 +7,7 @@ from decimal import Decimal
 import pytest
 from hypothesis import given
 from hypothesis import strategies as st
-from meridian_schemas.money import (
+from nemonis_schemas.money import (
     PrecisionError,
     clamp,
     floor_to_step,

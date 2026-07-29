@@ -1,4 +1,4 @@
-# Meridian — Prop-Firm Rule Profiles
+# Ñemonis — Prop-Firm Rule Profiles
 
 No firm is hard-coded. A profile is data: a configurable rule set the engine evaluates
 against account state, and which the simulator can replay history against.
@@ -12,7 +12,7 @@ of the same programme. A hard-coded rule set is wrong the moment terms change, a
 silently wrong. Encoding rules as versioned, dated, user-verifiable data means a change
 is an edit with an audit trail rather than a release.
 
-**Meridian ships no real firm's rules.** The bundled profile is a clearly-labelled
+**Ñemonis ships no real firm's rules.** The bundled profile is a clearly-labelled
 generic example with invented values. Real rules must be entered and verified by the
 user against the firm's official current terms.
 
