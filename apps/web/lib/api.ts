@@ -201,8 +201,57 @@ export type RunDetail = z.infer<typeof runDetailSchema>;
 export type EquityPoint = z.infer<typeof equityPointSchema>;
 export type DeterminismBreak = z.infer<typeof determinismBreakSchema>;
 
+export const strategyHealthSchema = z.object({
+  calls: z.number(),
+  faults: z.number(),
+  timeouts: z.number(),
+  fault_rate: z.string(),
+  mean_micros: z.string(),
+  last_fault: z.string().nullable(),
+  last_fault_at: z.string().nullable(),
+});
+
+/**
+ * `supported_*` are hard filters; `expected_regimes` is a prior.
+ *
+ * They are separate fields on purpose. Filtering on the prior would make the
+ * author's belief unfalsifiable and suppress the signals that would reveal they
+ * were wrong, so the UI must never present the two the same way.
+ */
+export const strategySchema = z.object({
+  key: z.string(),
+  id: z.string(),
+  version: z.string(),
+  author: z.string(),
+  hypothesis: z.string(),
+  description: z.string(),
+  status: z.string(),
+  is_runnable: z.boolean(),
+  quarantine_reason: z.string().nullable(),
+  deterministic: z.boolean(),
+  required_features: z.array(z.string()),
+  lookback_bars: z.number(),
+  max_signals_per_day: z.number(),
+  supported_instruments: z.array(z.string()).nullable(),
+  supported_sessions: z.array(z.string()).nullable(),
+  expected_regimes: z.array(z.string()).nullable(),
+  health: strategyHealthSchema,
+});
+
+export const registrySchema = z.object({
+  strategies: z.array(strategySchema),
+  funnel: z.array(
+    z.object({ status: z.string(), count: z.number(), runnable: z.boolean() }),
+  ),
+  notice: z.string(),
+});
+
+export type Strategy = z.infer<typeof strategySchema>;
+export type Registry = z.infer<typeof registrySchema>;
+
 export const api = {
   health: () => request("/health", healthSchema),
+  strategies: () => request("/api/strategies", registrySchema),
   backtests: () => request("/api/backtests", z.array(runSummarySchema)),
   backtest: (id: string) => request(`/api/backtests/${id}`, runDetailSchema),
   backtestEquity: (id: string) =>

@@ -228,7 +228,9 @@ async def main() -> int:
 
     registry = StrategyRegistry()
     for factory in (MovingAverageTrend, VolatilityBreakout):
-        registry.register(factory(), status=LifecycleStatus.ACTIVE)
+        # CANDIDATE, not ACTIVE: runnable for research, but ACTIVE is reserved
+        # for strategies promoted on evidence, and none has been.
+        registry.register(factory(), status=LifecycleStatus.CANDIDATE)
 
     strategies = registry.all()
     manifest = build_manifest(
@@ -308,7 +310,7 @@ async def main() -> int:
         manifest_version=MANIFEST_VERSION,
         strategy_key=manifest.strategy_key,
         strategy_version=manifest.strategy_version,
-        strategy_lifecycle=LifecycleStatus.ACTIVE.value,
+        strategy_lifecycle=LifecycleStatus.CANDIDATE.value,
         started_at=started,
         completed_at=completed,
         created_at=completed,
