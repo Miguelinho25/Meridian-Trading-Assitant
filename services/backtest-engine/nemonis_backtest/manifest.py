@@ -231,6 +231,37 @@ def capture_code_identity(
     )
 
 
+def dataset_fingerprint(series: dict[str, list[Any]]) -> str:
+    """A content hash of the bars actually fed to the engine.
+
+    The dataset must be identified by what it *contains*, not by when it was
+    fetched. An earlier version used the run date, which broke in both
+    directions: the same data run on two days looked like two different
+    experiments, and — far worse — *changed* data run on the same day looked
+    like the same experiment. Results would then diverge under an identical
+    manifest hash and be reported as a determinism break, when the real cause was
+    that the data underneath had moved.
+
+    Market data is deliberately not committed (licence-encumbered, and not ours
+    to redistribute), so this fingerprint is what lets a fresh checkout confirm
+    it re-downloaded the same history rather than merely a file of the same name.
+
+    Instruments are sorted so the hash does not depend on load order. Every bar
+    contributes: a truncated or back-filled series must not collide with the
+    original.
+    """
+    digest = hashlib.sha256()
+    for instrument in sorted(series):
+        digest.update(f"|{instrument}|".encode())
+        for bar in series[instrument]:
+            digest.update(
+                f"{bar.open_time.isoformat()},{bar.bid_open},{bar.bid_high},"
+                f"{bar.bid_low},{bar.bid_close},{bar.ask_open},{bar.ask_high},"
+                f"{bar.ask_low},{bar.ask_close};".encode()
+            )
+    return f"sha256:{digest.hexdigest()[:32]}"
+
+
 def result_hash(
     *,
     metrics: dict[str, Any],

@@ -34,6 +34,7 @@ from nemonis_backtest.manifest import (
     ExecutionModel,
     ModelIdentity,
     capture_code_identity,
+    dataset_fingerprint,
     result_hash,
 )
 from nemonis_backtest.validation import monte_carlo, stress_test, walk_forward
@@ -237,7 +238,8 @@ async def main() -> int:
         parameters={
             r.manifest.key: dict(getattr(r.manifest, "parameters", {})) for r in strategies
         },
-        dataset_version=datetime.now(UTC).date().isoformat(),
+        # Content, not clock. See dataset_fingerprint's docstring.
+        dataset_version=dataset_fingerprint(series),
         provider="file:yahoo-daily",
         bar_count=bar_count,
         timeframe=args.timeframe,

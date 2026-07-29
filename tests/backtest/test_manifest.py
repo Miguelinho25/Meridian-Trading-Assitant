@@ -23,6 +23,7 @@ from nemonis_backtest.manifest import (
     ModelIdentity,
     canonical_hash,
     capture_code_identity,
+    dataset_fingerprint,
     result_hash,
 )
 
@@ -316,3 +317,69 @@ class TestResultHash:
         assert result_hash(**common, trade_fingerprints=["a", "b"]) != result_hash(
             **common, trade_fingerprints=["b", "a"]
         )
+
+
+class TestDatasetFingerprint:
+    """The dataset must be identified by content, not by fetch time.
+
+    Using the run date broke in both directions: identical data on two days
+    looked like two experiments, and — the dangerous one — *changed* data on the
+    same day looked like one. Divergent results would then be reported as a
+    determinism break when the data underneath had simply moved.
+    """
+
+    def _bar(self, when: datetime, close: str) -> object:
+        from types import SimpleNamespace
+
+        c = Decimal(close)
+        return SimpleNamespace(
+            open_time=when,
+            bid_open=c,
+            bid_high=c,
+            bid_low=c,
+            bid_close=c,
+            ask_open=c,
+            ask_high=c,
+            ask_low=c,
+            ask_close=c,
+        )
+
+    def _series(self, closes: list[str], instrument: str = "EURUSD") -> dict:
+        return {
+            instrument: [
+                self._bar(datetime(2020, 1, i + 1, tzinfo=UTC), c) for i, c in enumerate(closes)
+            ]
+        }
+
+    def test_identical_data_fingerprints_identically(self) -> None:
+        a = self._series(["1.1000", "1.1010"])
+        b = self._series(["1.1000", "1.1010"])
+        assert dataset_fingerprint(a) == dataset_fingerprint(b)
+
+    def test_a_changed_price_changes_the_fingerprint(self) -> None:
+        """The case the run-date version could not see."""
+        a = self._series(["1.1000", "1.1010"])
+        b = self._series(["1.1000", "1.1011"])
+        assert dataset_fingerprint(a) != dataset_fingerprint(b)
+
+    def test_a_truncated_series_does_not_collide(self) -> None:
+        a = self._series(["1.1000", "1.1010", "1.1020"])
+        b = self._series(["1.1000", "1.1010"])
+        assert dataset_fingerprint(a) != dataset_fingerprint(b)
+
+    def test_a_different_instrument_changes_the_fingerprint(self) -> None:
+        a = self._series(["1.1000"], instrument="EURUSD")
+        b = self._series(["1.1000"], instrument="GBPUSD")
+        assert dataset_fingerprint(a) != dataset_fingerprint(b)
+
+    def test_load_order_does_not_matter(self) -> None:
+        """Instruments arriving in a different order are the same dataset."""
+        one = {**self._series(["1.1"], "EURUSD"), **self._series(["1.3"], "GBPUSD")}
+        two = {**self._series(["1.3"], "GBPUSD"), **self._series(["1.1"], "EURUSD")}
+        assert dataset_fingerprint(one) == dataset_fingerprint(two)
+
+    def test_the_fingerprint_flows_into_the_manifest_hash(self) -> None:
+        """Two runs over different data must not share a manifest hash."""
+        base = a_manifest()
+        moved = a_manifest(data=dataclasses.replace(base.data, dataset_version="sha256:different"))
+        assert moved.manifest_hash != base.manifest_hash
