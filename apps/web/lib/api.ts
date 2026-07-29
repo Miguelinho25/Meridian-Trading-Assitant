@@ -249,8 +249,57 @@ export const registrySchema = z.object({
 export type Strategy = z.infer<typeof strategySchema>;
 export type Registry = z.infer<typeof registrySchema>;
 
+export const propFirmProfileSchema = z.object({
+  profile_id: z.string(),
+  name: z.string(),
+  version: z.string(),
+  phase: z.string(),
+  enabled: z.boolean(),
+  starting_balance: z.string(),
+  account_currency: z.string(),
+  profit_target_pct: z.string().nullable(),
+  max_daily_loss_pct: z.string(),
+  max_total_loss_pct: z.string(),
+  reset_time: z.string(),
+  reset_timezone: z.string(),
+  trailing_stops_at_initial_balance: z.boolean(),
+  min_trading_days: z.number(),
+  max_trading_days: z.number().nullable(),
+  inactivity_days: z.number().nullable(),
+  consistency_rule_enabled: z.boolean(),
+  max_single_day_profit_pct_of_total: z.string().nullable(),
+  weekend_holding_allowed: z.boolean(),
+  overnight_holding_allowed: z.boolean(),
+  news_trading_restricted: z.boolean(),
+  news_buffer_minutes: z.number(),
+  ea_allowed: z.boolean(),
+  instrument_restrictions: z.array(z.string()),
+  buffer_warning_pct: z.string(),
+  notes: z.string(),
+  definitions: z.array(
+    z.object({
+      field_name: z.string(),
+      value: z.string(),
+      consequence: z.string(),
+      stricter_option: z.boolean(),
+    }),
+  ),
+  verification: z.object({
+    is_verified: z.boolean(),
+    source: z.string(),
+    last_verified_at: z.string().nullable(),
+    verified_by: z.string().nullable(),
+    verification_age_days: z.number().nullable(),
+    is_stale: z.boolean(),
+    warning: z.string(),
+  }),
+});
+
+export type PropFirmProfile = z.infer<typeof propFirmProfileSchema>;
+
 export const api = {
   health: () => request("/health", healthSchema),
+  propFirm: () => request("/api/prop-firm", z.array(propFirmProfileSchema)),
   strategies: () => request("/api/strategies", registrySchema),
   backtests: () => request("/api/backtests", z.array(runSummarySchema)),
   backtest: (id: string) => request(`/api/backtests/${id}`, runDetailSchema),
