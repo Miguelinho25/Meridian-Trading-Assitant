@@ -22,6 +22,7 @@ from nemonis_config import (
 from nemonis_db import append_event, dispose_engine, session_scope, verify_chain
 from nemonis_schemas.enums import AuditEventType
 
+from nemonis_api.backtests import router as backtests_router
 from nemonis_api.health import router as health_router
 from nemonis_api.middleware import RequestContextMiddleware
 from nemonis_api.risk import router as risk_router
@@ -108,6 +109,7 @@ def create_app() -> FastAPI:
 
     app.include_router(health_router)
     app.include_router(risk_router)
+    app.include_router(backtests_router)
     return app
 
 

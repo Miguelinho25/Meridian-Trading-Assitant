@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime
 from decimal import Decimal
 
@@ -31,6 +32,13 @@ def series() -> dict[str, list]:
         sym: SyntheticGenerator(sym, seed=2024).generate_list(START, 900)
         for sym in ("EURUSD", "GBPUSD")
     }
+
+
+def _registry(strategies=None) -> StrategyRegistry:
+    registry = StrategyRegistry()
+    for factory in strategies or (MovingAverageTrend, VolatilityBreakout):
+        registry.register(factory(), status=LifecycleStatus.ACTIVE)
+    return registry
 
 
 def make_engine(*, strategies=None) -> BacktestEngine:
@@ -310,3 +318,112 @@ class TestMetricsQuality:
         a = compute_metrics(trades, provenance=ResultProvenance.OUT_OF_SAMPLE)
         b = compute_metrics(trades, provenance=ResultProvenance.OUT_OF_SAMPLE)
         assert a.expectancy_ci == b.expectancy_ci
+
+
+class TestTheDailyResetActuallyHappens:
+    """The daily loss reference must move with the trading day.
+
+    It did not. ``Account.start_new_day()`` existed and had no callers, so
+    ``balance_at_day_start`` stayed at the opening balance for the whole run and
+    ``daily_loss_used`` measured the loss since the *start of the backtest*. The
+    daily limit therefore behaved as a lifetime limit: once cumulative drawdown
+    reached it, every later proposal was rejected DAILY_LOSS_WOULD_BREACH and
+    never recovered.
+
+    On real 2010-2026 data the engine stopped trading in March 2017 and produced
+    nothing across the remaining 56% of the timeline, while still reporting
+    metrics as though it had covered the full period. Fixing it took the run from
+    311 trades to 723 -- and net P&L from -4,818 to -7,076, because the bug had
+    been truncating the losing tail.
+
+    The whole 259-test suite passed throughout. Nothing asserted that trading
+    survives the day it first loses money.
+    """
+
+    def test_trading_continues_into_the_final_quarter_of_the_run(
+        self, series: dict[str, list]
+    ) -> None:
+        """The observable symptom: trades stop early and never resume."""
+        result = make_engine().run(series, make_config(series))
+        assert result.trades, "no trades at all — fixture is not exercising the engine"
+
+        start = min(b[0].open_time for b in series.values())
+        end = max(b[-1].open_time for b in series.values())
+        final_quarter = start + (end - start) * 3 // 4
+
+        late = [t for t in result.trades if t.opened_at >= final_quarter]
+        assert late, (
+            f"No trades after {final_quarter.date()} despite {len(result.trades)} "
+            f"earlier ones. The daily loss reference has probably stopped resetting, "
+            f"turning the daily limit into a lifetime one."
+        )
+
+    def test_the_daily_limit_releases_the_next_day(self, series: dict[str, list]) -> None:
+        """The direct reproduction, with a limit tight enough to bite immediately.
+
+        The default 5% daily allowance is never consumed by the synthetic
+        fixture, so a test using it passes whether or not the reset exists --
+        which is exactly how the bug survived.
+
+        1% is chosen deliberately between two failure modes: it must exceed one
+        trade's risk (0.35%) or every proposal is rejected on its own projected
+        loss and no latch is ever demonstrated, and it must be small enough that
+        a few losing trades consume it within the fixture's span.
+        """
+        tight = replace(GENERIC_TWO_PHASE, max_daily_loss_pct=Decimal("1.00"))
+        engine = BacktestEngine(
+            registry=_registry(),
+            specs=dict(WATCHLIST),
+            rates=RATES,
+            prop_profile=tight,
+        )
+        result = engine.run(series, make_config(series))
+
+        blocks = [
+            when
+            for when, _sid, _v, reason in result.decisions
+            if reason == "DAILY_LOSS_WOULD_BREACH"
+        ]
+        assert blocks, (
+            "the tight daily limit was never hit — the fixture cannot reproduce "
+            "the latch, so this test would prove nothing"
+        )
+
+        first_block = min(blocks)
+        later = [t for t in result.trades if t.opened_at.date() > first_block.date()]
+        assert later, (
+            f"The daily loss limit first blocked a trade on {first_block.date()} and "
+            f"nothing traded on any later day. A daily limit that never releases is "
+            f"a lifetime limit."
+        )
+
+    def test_the_reference_resets_once_per_trading_day(self, series: dict[str, list]) -> None:
+        """The mechanism, asserted directly.
+
+        Emergent-behaviour tests proved unreliable here: whether the latch is
+        *permanent* depends on whether equity ever recovers above the threshold,
+        which the synthetic fixture does and the real 2010-2026 data did not. Two
+        earlier versions of this test passed with the fix removed. Counting the
+        resets is fixture-independent -- with the defect it is exactly zero,
+        whatever the prices do.
+        """
+        result = make_engine().run(series, make_config(series))
+        assert result.daily_resets > 0, (
+            f"The trading day never rolled across {result.bars_processed} bars. "
+            f"daily_loss_used is therefore measured from the opening balance for "
+            f"the entire run, and the daily limit is a lifetime limit."
+        )
+
+        # Exact, not approximate: one reset per day boundary crossed, counted
+        # against the profile's own timezone rather than UTC midnight. Comparing
+        # to bar count would be wrong -- the fixture is intraday, so many bars
+        # share a trading day.
+        days = {
+            GENERIC_TWO_PHASE.trading_day_start(bar.open_time)
+            for bars in series.values()
+            for bar in bars
+        }
+        assert result.daily_resets == len(days) - 1, (
+            f"{result.daily_resets} resets across {len(days)} distinct trading "
+            f"days. The day boundary is being computed wrongly."
+        )

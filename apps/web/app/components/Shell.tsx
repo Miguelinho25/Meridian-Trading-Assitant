@@ -12,7 +12,7 @@ const NAV = [
   { label: "Proposals", href: "/proposals", ready: false },
   { label: "Risk Lab", href: "/risk", ready: true },
   { label: "Prop Firm", href: "/prop-firm", ready: false },
-  { label: "Backtest Lab", href: "/backtest", ready: false },
+  { label: "Backtest Lab", href: "/backtest", ready: true },
   { label: "Strategy Lab", href: "/strategy", ready: false },
   { label: "Journal", href: "/journal", ready: false },
   { label: "Neural Memory", href: "/memory", ready: false },

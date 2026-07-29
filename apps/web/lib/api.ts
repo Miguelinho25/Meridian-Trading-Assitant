@@ -126,8 +126,89 @@ export type EffectiveLimit = z.infer<typeof effectiveLimitSchema>;
 export type ThrottleBand = z.infer<typeof throttleBandSchema>;
 export type ProfileSummary = z.infer<typeof profileSummarySchema>;
 
+/**
+ * Backtest records. Numbers stay strings — see the note on limits above.
+ *
+ * `survives_all` is nullable on purpose: null means validation was not run,
+ * which is not the same as run-and-failed and must never render as a pass.
+ */
+export const runSummarySchema = z.object({
+  id: z.string(),
+  strategy_key: z.string(),
+  strategy_version: z.string(),
+  created_at: z.string(),
+  duration_ms: z.number(),
+  trade_count: z.number(),
+  provenance: z.string(),
+  net_pnl: z.string().nullable(),
+  max_drawdown_pct: z.string().nullable(),
+  survives_all: z.boolean().nullable(),
+  is_evidence: z.boolean(),
+  is_reproducible: z.boolean(),
+  git_dirty: z.boolean(),
+  manifest_hash: z.string(),
+  result_hash: z.string(),
+  instruments: z.array(z.string()),
+  timeframe: z.string(),
+});
+
+export const runDetailSchema = runSummarySchema.extend({
+  manifest: z.record(z.string(), z.unknown()),
+  manifest_version: z.string(),
+  metrics: z.record(z.string(), z.unknown()),
+  validation: z.record(z.string(), z.unknown()),
+  git_commit: z.string(),
+  git_branch: z.string(),
+  engine_version: z.string(),
+  feature_pipeline_version: z.string(),
+  risk_profile_version: z.string(),
+  market_data_provider: z.string(),
+  dataset_version: z.string(),
+  data_start: z.string().nullable(),
+  data_end: z.string().nullable(),
+  bar_count: z.number(),
+  spread_assumed: z.boolean(),
+  spread_model: z.string(),
+  slippage_model: z.string(),
+  commission_model: z.string(),
+  risk_profile: z.string(),
+  starting_balance: z.string().nullable(),
+  account_currency: z.string(),
+  seed: z.number(),
+  parameters: z.record(z.string(), z.unknown()),
+  signals_generated: z.number(),
+  proposals_made: z.number(),
+  rejections: z.number(),
+  notes: z.string(),
+  irreproducible_reason: z.string(),
+});
+
+export const equityPointSchema = z.object({
+  at: z.string(),
+  equity: z.string(),
+  drawdown_pct: z.string(),
+});
+
+export const determinismBreakSchema = z.object({
+  manifest_hash: z.string(),
+  run_ids: z.array(z.string()),
+  result_hashes: z.array(z.string()),
+  summary: z.string(),
+});
+
+export type RunSummary = z.infer<typeof runSummarySchema>;
+export type RunDetail = z.infer<typeof runDetailSchema>;
+export type EquityPoint = z.infer<typeof equityPointSchema>;
+export type DeterminismBreak = z.infer<typeof determinismBreakSchema>;
+
 export const api = {
   health: () => request("/health", healthSchema),
+  backtests: () => request("/api/backtests", z.array(runSummarySchema)),
+  backtest: (id: string) => request(`/api/backtests/${id}`, runDetailSchema),
+  backtestEquity: (id: string) =>
+    request(`/api/backtests/${id}/equity`, z.array(equityPointSchema)),
+  determinismBreaks: () =>
+    request("/api/backtests/determinism-breaks", z.array(determinismBreakSchema)),
   limits: () => request("/api/risk/limits", limitsSchema),
   throttle: () => request("/api/risk/throttle", z.array(throttleBandSchema)),
   profiles: () => request("/api/risk/profiles", z.array(profileSummarySchema)),

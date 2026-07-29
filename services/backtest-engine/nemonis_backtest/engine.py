@@ -20,7 +20,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from decimal import Decimal
 
 from nemonis_broker.account import Account
@@ -92,6 +92,10 @@ class BacktestResult:
     bars_processed: int = 0
     ambiguous_bars: int = 0
     strategy_faults: int = 0
+    #: Times the trading day rolled and the daily loss reference was reset.
+    #: Zero over a multi-day run means the daily limit is behaving as a lifetime
+    #: limit — the defect this counter exists to make visible.
+    daily_resets: int = 0
     final_balance: Decimal = Decimal(0)
     peak_equity: Decimal = Decimal(0)
     max_drawdown_pct: Decimal = Decimal(0)
@@ -120,6 +124,18 @@ class BacktestEngine:
         self.prop_profile = prop_profile
         self.classifier = classifier or DEFAULT_CLASSIFIER
         self.features = features
+
+    def _trading_day_start(self, moment: datetime) -> datetime:
+        """Start of the trading day containing ``moment``.
+
+        Falls back to UTC midnight when no prop-firm profile is configured. The
+        daily loss limit comes from the risk profile and exists regardless, so
+        skipping the reset here would leave non-prop runs with the very defect
+        this method was added to fix — a daily limit that never releases.
+        """
+        if self.prop_profile is not None:
+            return self.prop_profile.trading_day_start(moment)
+        return moment.astimezone(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
 
     def run(self, series: dict[str, list[Candle]], config: BacktestConfig) -> BacktestResult:
         """Execute the loop. Deterministic for a given seed and inputs."""
@@ -164,6 +180,7 @@ class BacktestEngine:
 
         clock = ReplayClock(timeline[0])
         peak = config.starting_balance
+        trading_day = self._trading_day_start(timeline[0])
 
         for moment in timeline:
             # 1. Advance the clock. It cannot be moved beyond this bar.
@@ -172,6 +189,26 @@ class BacktestEngine:
             current_bars = {sym: table[moment] for sym, table in by_time.items() if moment in table}
             if not current_bars:
                 continue
+
+            # 1a. Roll the trading day before anything else in it.
+            #
+            # Without this the daily reference never moves, so `daily_loss_used`
+            # measures the loss since the *start of the backtest* rather than
+            # since the last reset. The daily limit then behaves as a lifetime
+            # limit: once cumulative drawdown reaches it, every subsequent trade
+            # is rejected DAILY_LOSS_WOULD_BREACH and never recovers. A 2010-2026
+            # run stopped trading in March 2017 and produced no trades across the
+            # remaining 56% of the timeline, while still reporting metrics as if
+            # it had covered the whole period.
+            #
+            # The reset uses the profile's own timezone and reset hour, so it
+            # lands where the firm's day actually starts rather than at UTC
+            # midnight.
+            day = self._trading_day_start(moment)
+            if day > trading_day:
+                account.start_new_day()
+                trading_day = day
+                result.daily_resets += 1
 
             # 2-4. Settle everything before any decision is made.
             broker.process_bar(current_bars, at=moment)
