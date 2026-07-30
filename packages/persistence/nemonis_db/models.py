@@ -481,3 +481,181 @@ class BacktestTrade(Base):
         CheckConstraint("direction IN ('LONG', 'SHORT')", name="ck_backtest_trade_direction"),
         UniqueConstraint("run_id", "sequence", name="uq_trade_run_sequence"),
     )
+
+
+# --- Paper trading sessions -------------------------------------------------
+#
+# Unlike backtest runs, these tables are *mutable by design*: a live session's
+# state advances every tick. That is the opposite of the append-only rule
+# governing backtest_runs, and the difference is deliberate — a backtest is a
+# finished result, a session is a position that still exists.
+#
+# What must survive a restart is open exposure. A session that reloads without
+# its positions and working orders has not lost bookkeeping; it has orphaned
+# real (if simulated) risk that nothing will now manage, with stops that will
+# never be honoured. Everything else here can be recomputed.
+
+
+class PaperSessionRow(Base):
+    """One paper-trading session, resumable across restarts."""
+
+    __tablename__ = "paper_sessions"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    status: Mapped[str] = mapped_column(String(20), index=True)
+
+    mode: Mapped[str] = mapped_column(String(20))
+    approval_mode: Mapped[str] = mapped_column(String(30))
+    risk_profile: Mapped[str] = mapped_column(String(30))
+    prop_profile_id: Mapped[str] = mapped_column(String(60), default="")
+    instruments: Mapped[str] = mapped_column(Text, default="[]")  # JSON array
+    timeframe: Mapped[str] = mapped_column(String(10), default="")
+    strategy_keys: Mapped[str] = mapped_column(Text, default="[]")  # JSON array
+    seed: Mapped[int] = mapped_column(Integer, default=0)
+
+    account_currency: Mapped[str] = mapped_column(String(10))
+    starting_balance: Mapped[Decimal] = mapped_column(DecimalText)
+
+    # --- Live account state, rewritten each tick ---
+    balance: Mapped[Decimal] = mapped_column(DecimalText)
+    equity: Mapped[Decimal] = mapped_column(DecimalText)
+    high_water_mark: Mapped[Decimal] = mapped_column(DecimalText)
+    #: The daily-loss reference. Restoring the balance without this would make
+    #: the first tick after a restart measure its daily loss from the wrong
+    #: point, which is how a daily limit silently becomes a lifetime one.
+    balance_at_day_start: Mapped[Decimal] = mapped_column(DecimalText)
+    highest_equity_today: Mapped[Decimal] = mapped_column(DecimalText)
+    realised_pnl: Mapped[Decimal] = mapped_column(DecimalText)
+    total_commission: Mapped[Decimal] = mapped_column(DecimalText)
+    #: The trading day the session believes it is in, so a restart does not
+    #: spuriously roll the day and reset the daily reference again.
+    trading_day: Mapped[datetime | None] = mapped_column(UTCDateTime)
+
+    ticks: Mapped[int] = mapped_column(Integer, default=0)
+    signals_generated: Mapped[int] = mapped_column(Integer, default=0)
+    proposals_made: Mapped[int] = mapped_column(Integer, default=0)
+    orders_submitted: Mapped[int] = mapped_column(Integer, default=0)
+    rejections: Mapped[int] = mapped_column(Integer, default=0)
+    closed_trade_count: Mapped[int] = mapped_column(Integer, default=0)
+
+    started_at: Mapped[datetime] = mapped_column(UTCDateTime)
+    last_tick_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    stopped_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime)
+
+    #: Set when the session refused to continue. Kept rather than cleared: why a
+    #: session stopped is the first question asked about it afterwards.
+    halt_reason: Mapped[str] = mapped_column(Text, default="")
+
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('RUNNING', 'STOPPED', 'HALTED')", name="ck_paper_session_status"
+        ),
+        # No broker adapter exists. A session recorded in a mode implying real
+        # execution is a schema violation, not a configuration mistake.
+        CheckConstraint("mode IN ('research', 'backtest', 'paper')", name="ck_paper_session_mode"),
+    )
+
+
+class PaperPosition(Base):
+    """An open position. The state whose loss would orphan exposure."""
+
+    __tablename__ = "paper_positions"
+
+    position_id: Mapped[str] = mapped_column(String(60), primary_key=True)
+    session_id: Mapped[str] = mapped_column(String(40), ForeignKey("paper_sessions.id"), index=True)
+    instrument: Mapped[str] = mapped_column(String(20))
+    direction: Mapped[str] = mapped_column(String(10))
+    lots: Mapped[Decimal] = mapped_column(DecimalText)
+    entry_price: Mapped[Decimal] = mapped_column(DecimalText)
+    opened_at: Mapped[datetime] = mapped_column(UTCDateTime)
+    strategy_id: Mapped[str] = mapped_column(String(80), default="")
+    #: Losing these would leave the position without its protective levels.
+    stop_loss: Mapped[Decimal | None] = mapped_column(DecimalText)
+    take_profit: Mapped[Decimal | None] = mapped_column(DecimalText)
+    commission_paid: Mapped[Decimal] = mapped_column(DecimalText)
+    best_price: Mapped[Decimal | None] = mapped_column(DecimalText)
+    worst_price: Mapped[Decimal | None] = mapped_column(DecimalText)
+
+    __table_args__ = (
+        CheckConstraint("direction IN ('LONG', 'SHORT')", name="ck_paper_position_direction"),
+        CheckConstraint("lots > '0'", name="ck_paper_position_lots_positive"),
+    )
+
+
+class PaperWorkingOrder(Base):
+    """An order queued but not yet filled.
+
+    Queued orders are as much live exposure as open positions: dropping one on
+    restart silently cancels a trade the risk engine authorised.
+    """
+
+    __tablename__ = "paper_working_orders"
+
+    order_id: Mapped[str] = mapped_column(String(60), primary_key=True)
+    session_id: Mapped[str] = mapped_column(String(40), ForeignKey("paper_sessions.id"), index=True)
+    proposal_hash: Mapped[str] = mapped_column(String(80))
+    #: The risk decision that authorised it (invariant I1). An order restored
+    #: without its authorisation could not be re-derived or audited.
+    decision_id: Mapped[str] = mapped_column(String(60), default="")
+    instrument: Mapped[str] = mapped_column(String(20))
+    direction: Mapped[str] = mapped_column(String(10))
+    order_type: Mapped[str] = mapped_column(String(20))
+    lifecycle_state: Mapped[str] = mapped_column(String(20))
+    #: Full transition history as JSON. Storing only the final state would
+    #: destroy evidence architecture.md requires and that cannot be rebuilt.
+    lifecycle_history: Mapped[str] = mapped_column(Text, default="[]")
+    size_lots: Mapped[Decimal] = mapped_column(DecimalText)
+    strategy_id: Mapped[str] = mapped_column(String(80), default="")
+    limit_price: Mapped[Decimal | None] = mapped_column(DecimalText)
+    stop_price: Mapped[Decimal | None] = mapped_column(DecimalText)
+    stop_loss: Mapped[Decimal | None] = mapped_column(DecimalText)
+    take_profit: Mapped[Decimal | None] = mapped_column(DecimalText)
+    submitted_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
+
+    __table_args__ = (
+        CheckConstraint("direction IN ('LONG', 'SHORT')", name="ck_paper_order_direction"),
+    )
+
+
+class PaperEquityPoint(Base):
+    """The live equity curve, appended once per acting tick."""
+
+    __tablename__ = "paper_equity_points"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    session_id: Mapped[str] = mapped_column(String(40), ForeignKey("paper_sessions.id"), index=True)
+    at: Mapped[datetime] = mapped_column(UTCDateTime)
+    equity: Mapped[Decimal] = mapped_column(DecimalText)
+    balance: Mapped[Decimal] = mapped_column(DecimalText)
+    drawdown_pct: Mapped[Decimal] = mapped_column(DecimalText)
+    open_positions: Mapped[int] = mapped_column(Integer, default=0)
+
+    __table_args__ = (UniqueConstraint("session_id", "at", name="uq_paper_equity_at"),)
+
+
+class PaperTrade(Base):
+    """A closed trade. Append-only: a closed trade is a finished fact."""
+
+    __tablename__ = "paper_trades"
+
+    trade_id: Mapped[str] = mapped_column(String(60), primary_key=True)
+    session_id: Mapped[str] = mapped_column(String(40), ForeignKey("paper_sessions.id"), index=True)
+    instrument: Mapped[str] = mapped_column(String(20), index=True)
+    direction: Mapped[str] = mapped_column(String(10))
+    strategy_id: Mapped[str] = mapped_column(String(80), default="")
+    lots: Mapped[Decimal] = mapped_column(DecimalText)
+    entry_price: Mapped[Decimal] = mapped_column(DecimalText)
+    exit_price: Mapped[Decimal] = mapped_column(DecimalText)
+    opened_at: Mapped[datetime] = mapped_column(UTCDateTime)
+    closed_at: Mapped[datetime] = mapped_column(UTCDateTime, index=True)
+    pnl: Mapped[Decimal] = mapped_column(DecimalText)
+    commission: Mapped[Decimal] = mapped_column(DecimalText)
+    exit_reason: Mapped[str] = mapped_column(String(30), default="")
+    mfe_pips: Mapped[Decimal | None] = mapped_column(DecimalText)
+    mae_pips: Mapped[Decimal | None] = mapped_column(DecimalText)
+    ambiguous_exit: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    __table_args__ = (
+        CheckConstraint("direction IN ('LONG', 'SHORT')", name="ck_paper_trade_direction"),
+    )

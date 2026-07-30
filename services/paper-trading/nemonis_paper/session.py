@@ -30,17 +30,20 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal
+from typing import Any
 
 from nemonis_backtest.cycle import CycleSettings, DecisionCycle, StepResult
-from nemonis_broker.account import Account
-from nemonis_broker.broker import ClosedTrade, PaperBroker
+from nemonis_broker.account import Account, Position
+from nemonis_broker.broker import ClosedTrade, PaperBroker, WorkingOrder
 from nemonis_broker.fills import FillModel
+from nemonis_broker.state_machine import OrderLifecycle, Transition
 from nemonis_config.settings import ApprovalMode, Mode, RiskProfileName
 from nemonis_features.regime import RegimeClassifier
 from nemonis_marketdata.barview import BarView
 from nemonis_marketdata.instruments import InstrumentSpec
 from nemonis_marketdata.types import Candle
 from nemonis_risk.propfirm import PropFirmProfile
+from nemonis_schemas.enums import Direction, OrderState, OrderType
 from nemonis_strategy.registry import StrategyRegistry
 
 #: Modes this session may run in. LIVE is absent deliberately: no broker adapter
@@ -153,6 +156,9 @@ class PaperSession:
         self.trading_day: datetime | None = None
         self.ticks = 0
         self.last_tick_at: datetime | None = None
+        #: Equity at the last acting tick, so a snapshot records the marked value
+        #: rather than the balance, which ignores floating P&L.
+        self.last_equity = starting_balance
         self._closed_seen = 0
 
     @property
@@ -241,6 +247,7 @@ class PaperSession:
         if step.day_rolled:
             self.trading_day = self.cycle.trading_day_start(at)
 
+        self.last_equity = step.equity
         closed = tuple(self.broker.state.closed_trades[before:])
         self._closed_seen = len(self.broker.state.closed_trades)
 
@@ -269,3 +276,146 @@ class PaperSession:
     @property
     def closed_trades(self) -> list[ClosedTrade]:
         return list(self.broker.state.closed_trades)
+
+    # --- Resumption ---------------------------------------------------------
+    #
+    # Expressed as plain dictionaries rather than persistence types: the session
+    # must not import the database layer, and a driver owns the writing. What
+    # matters here is completeness — a restore that omits a position leaves
+    # exposure nothing will manage, with stops that will never be honoured.
+
+    def state(self) -> dict[str, Any]:
+        """Everything needed to resume exactly where this stopped."""
+        a = self.account
+        return {
+            "balance": a.balance,
+            "equity": self.last_equity,
+            "high_water_mark": a.high_water_mark,
+            # Without this the first tick after a restart measures its daily loss
+            # from the wrong reference, which is how a daily limit silently
+            # becomes a lifetime one.
+            "balance_at_day_start": a.balance_at_day_start,
+            "highest_equity_today": a.highest_equity_today,
+            "realised_pnl": a.realised_pnl,
+            "total_commission": a.total_commission,
+            "trading_day": self.trading_day,
+            "ticks": self.ticks,
+            "last_tick_at": self.last_tick_at,
+            "positions": [
+                {
+                    "position_id": p.position_id,
+                    "instrument": p.instrument,
+                    "direction": p.direction.value,
+                    "lots": p.lots,
+                    "entry_price": p.entry_price,
+                    "opened_at": p.opened_at,
+                    "strategy_id": p.strategy_id,
+                    "stop_loss": p.stop_loss,
+                    "take_profit": p.take_profit,
+                    "commission_paid": p.commission_paid,
+                    "best_price": p.best_price,
+                    "worst_price": p.worst_price,
+                }
+                for p in a.positions.values()
+            ],
+            "working_orders": [
+                {
+                    "order_id": o.order_id,
+                    "proposal_hash": o.proposal_hash,
+                    "decision_id": o.decision_id,
+                    "instrument": o.instrument,
+                    "direction": o.direction.value,
+                    "order_type": o.order_type.value,
+                    # State *and* history. architecture.md requires every
+                    # transition recorded, and OrderLifecycle's own docstring
+                    # notes that reconstructing the history from a final state is
+                    # impossible — so persisting only the state would destroy
+                    # evidence that cannot be recovered.
+                    "lifecycle_state": o.lifecycle.state.value,
+                    "lifecycle_history": [
+                        {
+                            "from_state": t.from_state.value if t.from_state else None,
+                            "to_state": t.to_state.value,
+                            "at": t.at,
+                            "actor": t.actor,
+                            "reason": t.reason,
+                        }
+                        for t in o.lifecycle.history
+                    ],
+                    "size_lots": o.size_lots,
+                    "strategy_id": o.strategy_id,
+                    "limit_price": o.limit_price,
+                    "stop_price": o.stop_price,
+                    "stop_loss": o.stop_loss,
+                    "take_profit": o.take_profit,
+                    "submitted_at": o.submitted_at,
+                }
+                for o in self.broker.state.working.values()
+            ],
+        }
+
+    def restore(self, state: dict[str, Any]) -> None:
+        """Reinstate persisted state onto a freshly constructed session.
+
+        Positions and working orders are *replaced*, not merged: a stale entry
+        surviving a restore would be exposure the account does not actually hold.
+        """
+        a = self.account
+        a.balance = state["balance"]
+        a.high_water_mark = state["high_water_mark"]
+        a.balance_at_day_start = state["balance_at_day_start"]
+        a.highest_equity_today = state["highest_equity_today"]
+        a.realised_pnl = state["realised_pnl"]
+        a.total_commission = state["total_commission"]
+        self.trading_day = state.get("trading_day")
+        self.ticks = state.get("ticks", 0)
+        self.last_tick_at = state.get("last_tick_at")
+        self.last_equity = state.get("equity", a.balance)
+
+        a.positions.clear()
+        for row in state.get("positions", ()):
+            a.positions[row["position_id"]] = Position(
+                position_id=row["position_id"],
+                instrument=row["instrument"],
+                direction=Direction(row["direction"]),
+                lots=row["lots"],
+                entry_price=row["entry_price"],
+                opened_at=row["opened_at"],
+                strategy_id=row["strategy_id"],
+                stop_loss=row["stop_loss"],
+                take_profit=row["take_profit"],
+                commission_paid=row["commission_paid"],
+                best_price=row["best_price"],
+                worst_price=row["worst_price"],
+            )
+
+        self.broker.state.working.clear()
+        for row in state.get("working_orders", ()):
+            self.broker.state.working[row["order_id"]] = WorkingOrder(
+                order_id=row["order_id"],
+                proposal_hash=row["proposal_hash"],
+                decision_id=row["decision_id"],
+                instrument=row["instrument"],
+                direction=Direction(row["direction"]),
+                order_type=OrderType(row["order_type"]),
+                lifecycle=OrderLifecycle(
+                    state=OrderState(row["lifecycle_state"]),
+                    history=[
+                        Transition(
+                            from_state=(OrderState(t["from_state"]) if t["from_state"] else None),
+                            to_state=OrderState(t["to_state"]),
+                            at=t["at"],
+                            actor=t["actor"],
+                            reason=t.get("reason", ""),
+                        )
+                        for t in row.get("lifecycle_history", ())
+                    ],
+                ),
+                size_lots=row["size_lots"],
+                strategy_id=row["strategy_id"],
+                limit_price=row["limit_price"],
+                stop_price=row["stop_price"],
+                stop_loss=row["stop_loss"],
+                take_profit=row["take_profit"],
+                submitted_at=row["submitted_at"],
+            )
