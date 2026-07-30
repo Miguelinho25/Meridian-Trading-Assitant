@@ -13,7 +13,7 @@ specification and `spec_verified_at` set. Until then they carry
 from __future__ import annotations
 
 from dataclasses import dataclass
-from decimal import Decimal
+from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal
 from typing import Final
 
 
@@ -47,6 +47,50 @@ class InstrumentSpec:
 
     def price_to_pips(self, price_delta: Decimal) -> Decimal:
         return price_delta / self.pip_size
+
+    @property
+    def tick_size(self) -> Decimal:
+        """The smallest price increment this instrument is quoted in.
+
+        One unit in the last quoted digit: 0.00001 on a 5-digit pair, 0.001 on a
+        3-digit JPY pair. Every price sent to a venue must be a multiple of this.
+        An order priced between ticks is not "close enough" — it is rejected.
+        """
+        return Decimal(1).scaleb(-self.digits)
+
+    def quantise_away_from(self, price: Decimal, reference: Decimal) -> Decimal:
+        """Snap ``price`` onto the tick grid, moving *away* from ``reference``.
+
+        For stops. Strategy levels are conceptual and arrive at full division
+        precision — an ATR-scaled stop carries the repeating decimal of a 14-bar
+        average — so they must be snapped to the grid before they can be placed.
+
+        The direction of that snap is a safety property, not a rounding
+        preference. Nearest-tick rounding would sometimes pull a stop *closer* to
+        entry, shortening the distance the position was sized against and making
+        realised risk exceed what the operator authorised. Rounding outward can
+        only ever widen the stop, so the residual error is always in the safe
+        direction. Same asymmetry, same reason as the lot flooring in
+        :func:`nemonis_schemas.money.floor_to_step` (invariant I3).
+        """
+        rounding = ROUND_FLOOR if price < reference else ROUND_CEILING
+        return price.quantize(self.tick_size, rounding=rounding)
+
+    def quantise_toward(self, price: Decimal, reference: Decimal) -> Decimal:
+        """Snap ``price`` onto the tick grid, moving *toward* ``reference``.
+
+        The mirror of :meth:`quantise_away_from`, for targets. A target is only
+        ever pulled nearer entry, so quantisation can shave a fraction of a tick
+        off expected reward but can never inflate it — reported reward-to-risk
+        stays honest rather than flattering.
+
+        A target closer to entry than one tick collapses onto entry. That is
+        degenerate geometry the strategies cannot produce (theirs sit multiple
+        ATRs out), and it fails safe: the trade's reward goes to zero rather than
+        its risk going up.
+        """
+        rounding = ROUND_CEILING if price < reference else ROUND_FLOOR
+        return price.quantize(self.tick_size, rounding=rounding)
 
 
 def _spec(

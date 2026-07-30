@@ -285,6 +285,21 @@ class DecisionCycle:
                 max(Decimal(0), (account.high_water_mark - equity) / total_limit),
             )
 
+        # Strategies express levels as concepts, at whatever precision the
+        # arithmetic produced. Snap them onto the venue's tick grid here, at the
+        # one place both drivers pass through, because an unquantised stop is not
+        # a placeable order — a broker adapter would have it rejected outright.
+        #
+        # This happens *before* the risk engine sees the proposal, and that
+        # ordering is the point: sizing divides by the stop distance, so
+        # quantising afterwards would leave lots computed against a stop a tick
+        # away from the one actually resting at the broker. Widening the stop
+        # first means the size falls to match it.
+        stop = spec.quantise_away_from(signal.stop, signal.entry)
+        target = (
+            spec.quantise_toward(signal.target, signal.entry) if signal.target is not None else None
+        )
+
         proposal = TradeProposal(
             proposal_id=new_id(IdPrefix.PROPOSAL),
             strategy_id=signal.strategy_id,
@@ -292,8 +307,8 @@ class DecisionCycle:
             instrument=signal.instrument,
             direction=signal.direction,
             entry=signal.entry,
-            stop=signal.stop,
-            target=signal.target,
+            stop=stop,
+            target=target,
             requested_risk_pct=s.requested_risk_pct,
             confidence=signal.confidence,
             decision_time=signal.decision_time,

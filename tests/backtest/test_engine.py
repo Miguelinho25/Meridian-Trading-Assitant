@@ -8,7 +8,9 @@ from decimal import Decimal
 
 import pytest
 from nemonis_backtest import BacktestConfig, BacktestEngine, compute_metrics
+from nemonis_backtest.cycle import DecisionCycle
 from nemonis_backtest.metrics import SUPPRESSION_THRESHOLD, BiasFlag
+from nemonis_broker.broker import PaperBroker
 from nemonis_broker.fills import FillModel, SlippageModel
 from nemonis_marketdata import SyntheticGenerator
 from nemonis_marketdata.instruments import WATCHLIST
@@ -84,6 +86,127 @@ class TestItRuns:
 
     def test_no_strategy_faults(self, series) -> None:
         assert make_engine().run(series, make_config(series)).strategy_faults == 0
+
+
+class TestStopsAndTargetsAreTradeablePrices:
+    """Protective levels must sit on the venue's tick grid by the time they leave
+    the pipeline.
+
+    Strategies compute them as ATR multiples, so they arrive with the full
+    precision of the division — a paper session held a EURUSD stop of
+    1.053292142857142857142857143, the repeating decimal of a 14-bar mean. Every
+    layer accepted it because nothing between the strategy and the broker
+    asserted anything about price precision, and the paper broker is happy to
+    fill at any Decimal. The first real broker adapter would have had the order
+    rejected outright.
+    """
+
+    def _run_capturing(self, series, monkeypatch):
+        """Run a backtest, capturing (signal, proposal) pairs and submitted orders.
+
+        Pairs are taken where the conversion happens rather than reconstructed
+        afterwards. Matching a submitted stop back to its signal by proximity
+        does not work: ATR moves slowly, so consecutive bars produce stops well
+        within a tick of each other and the wrong signal gets matched.
+        """
+        pairs = []
+        submitted = []
+
+        risk_context = DecisionCycle._risk_context
+        submit = PaperBroker.submit
+
+        def spy_risk_context(self, signal, account, bars, equity):
+            ctx = risk_context(self, signal, account, bars, equity)
+            pairs.append((signal, ctx.proposal))
+            return ctx
+
+        def spy_submit(self, **kw):
+            submitted.append((kw["instrument"], kw.get("stop_loss"), kw.get("take_profit")))
+            return submit(self, **kw)
+
+        monkeypatch.setattr(DecisionCycle, "_risk_context", spy_risk_context)
+        monkeypatch.setattr(PaperBroker, "submit", spy_submit)
+        make_engine().run(series, make_config(series))
+        return pairs, submitted
+
+    def test_the_fixture_really_does_produce_off_grid_levels(self, series, monkeypatch) -> None:
+        """Guards the assertions below from passing vacuously.
+
+        If the baselines ever started emitting levels that happen to land on the
+        grid, the on-grid assertions would hold whether or not quantisation
+        existed, and the regression would be free to come back unnoticed.
+        """
+        pairs, _ = self._run_capturing(series, monkeypatch)
+        assert pairs, "no signals reached the risk engine — the fixture proves nothing"
+
+        off_grid = [s for s, _ in pairs if s.stop % WATCHLIST[s.instrument].tick_size != 0]
+        assert off_grid, (
+            "every raw strategy stop already sat on the tick grid, so the "
+            "quantisation assertions below would prove nothing"
+        )
+
+    def test_every_level_reaching_the_broker_lands_on_the_grid(self, series, monkeypatch) -> None:
+        _, submitted = self._run_capturing(series, monkeypatch)
+        assert submitted, "no orders submitted — the fixture is not exercising the pipeline"
+
+        for symbol, stop, target in submitted:
+            tick = WATCHLIST[symbol].tick_size
+            assert stop is not None
+            assert stop % tick == 0, (
+                f"{symbol} stop {stop} is not a multiple of {tick}. No venue would "
+                f"accept this order."
+            )
+            if target is not None:
+                assert target % tick == 0, f"{symbol} target {target} is not a multiple of {tick}."
+
+    def test_quantising_widened_stops_rather_than_tightening_them(
+        self, series, monkeypatch
+    ) -> None:
+        """The safety direction, on every proposal the pipeline built.
+
+        Sizing divides by the stop distance, so a stop pulled *closer* to entry
+        would leave the position risking more than the operator authorised.
+        """
+        pairs, _ = self._run_capturing(series, monkeypatch)
+        assert pairs
+
+        for signal, proposal in pairs:
+            assert abs(signal.entry - proposal.stop) >= abs(signal.entry - signal.stop), (
+                f"{signal.instrument} {signal.direction.value}: stop moved from "
+                f"{signal.stop} to {proposal.stop} against entry {signal.entry} — "
+                f"nearer entry than the strategy asked. The position is sized against "
+                f"this distance, so realised risk would exceed authorised risk."
+            )
+
+    def test_targets_are_never_moved_further_out(self, series, monkeypatch) -> None:
+        """The mirror: quantisation may shave reward, never invent it."""
+        pairs, _ = self._run_capturing(series, monkeypatch)
+        checked = 0
+        for signal, proposal in pairs:
+            if signal.target is None:
+                continue
+            assert proposal.target is not None
+            checked += 1
+            assert abs(signal.entry - proposal.target) <= abs(signal.entry - signal.target), (
+                f"{signal.instrument}: target moved from {signal.target} to "
+                f"{proposal.target} against entry {signal.entry} — further out than "
+                f"the strategy claimed, flattering reward-to-risk."
+            )
+        assert checked, "no proposal carried a target"
+
+    def test_proposals_carry_grid_aligned_levels(self, series, monkeypatch) -> None:
+        """Asserted on the proposal, not just on what reached the broker.
+
+        Rejected proposals never reach a broker, but they are recorded as
+        research data and read back — they should be as well-formed as the
+        approved ones.
+        """
+        pairs, _ = self._run_capturing(series, monkeypatch)
+        for _signal, proposal in pairs:
+            tick = WATCHLIST[proposal.instrument].tick_size
+            assert proposal.stop % tick == 0
+            if proposal.target is not None:
+                assert proposal.target % tick == 0
 
 
 class TestDeterminism:

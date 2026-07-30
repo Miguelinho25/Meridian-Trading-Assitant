@@ -153,24 +153,24 @@ class TestOpenExposureSurvivesARestart:
 
             # Losing these would leave the position with no protective levels.
             #
-            # Compared to storage precision rather than exactly. DecimalText
-            # stores 10 decimal places, and these stops arrive from risk-sizing
-            # division carrying ~28 significant digits, so the round trip loses
-            # digits below 1e-10 — about 1e-6 of a pip. That is immaterial to a
-            # price, but it is only immaterial because the tolerance is stated;
-            # an exact assertion here would fail for a reason that has nothing to
-            # do with exposure being preserved. See the separate issue about
-            # quantising stops to the instrument tick grid, which no venue would
-            # accept unquantised.
-            tolerance = Decimal("1e-9")
+            # Compared exactly, which only became possible once stops and targets
+            # were quantised to the instrument's tick grid before placement — five
+            # decimal places on EURUSD, three on a JPY pair. DecimalText stores
+            # ten, so a placeable price survives the round trip digit for digit.
+            #
+            # This was previously asserted against a 1e-9 tolerance: ATR-derived
+            # levels reached storage carrying ~28 significant digits (a 14-bar
+            # mean does not terminate), and the round trip truncated them. The
+            # tolerance was hiding a real defect rather than a storage limit —
+            # those prices were also untradeable.
             assert restored.stop_loss is not None
             assert original.stop_loss is not None
-            assert abs(restored.stop_loss - original.stop_loss) < tolerance
+            assert restored.stop_loss == original.stop_loss
             if original.take_profit is None:
                 assert restored.take_profit is None
             else:
                 assert restored.take_profit is not None
-                assert abs(restored.take_profit - original.take_profit) < tolerance
+                assert restored.take_profit == original.take_profit
 
     async def test_the_daily_loss_reference_survives(self, session: AsyncSession) -> None:
         """Restoring the balance without this would make the first tick after a
