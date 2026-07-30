@@ -114,6 +114,11 @@ if stop_distance < stop_level:    → reject  STOP_INSIDE_BROKER_STOP_LEVEL
 if realised_risk(lots) > risk_amount_acct:  → reject  SIZING_INVARIANT_VIOLATED
 ```
 
+The first check runs here, on the size *before* clamping, so it means exactly one
+thing: this account cannot fund a minimum lot over this stop. A size that clears it
+and is then clamped below the minimum is a different event, rejected later with
+`SIZE_BELOW_MINIMUM_LOT_AFTER_CLAMP` (§4).
+
 The last check is a belt-and-braces assertion of I3. It should be unreachable. If it
 ever fires, that is a defect, and it fails loudly rather than trading.
 
@@ -204,6 +209,27 @@ Ignoring the quote leg is a common and expensive omission.
 | Code | Rule |
 |---|---|
 | `DRAWDOWN_THROTTLE` | Size scaled by drawdown-response curve (§6) |
+
+### Sizing and integrity
+
+| Code | Rule |
+|---|---|
+| `SIZE_BELOW_MINIMUM_LOT` | The account cannot fund one minimum lot over this stop |
+| `SIZE_BELOW_MINIMUM_LOT_AFTER_CLAMP` | A clamp reduced a fundable size below the minimum |
+| `SIZING_INVARIANT_VIOLATED` | I3 assertion failed — a defect, not a market condition |
+| `FX_CONVERSION_UNAVAILABLE` | No conversion route to the account currency (§3.2) |
+| `PROPOSAL_HASH_MISMATCH` | Order economics do not match the authorised decision |
+
+The two sub-minimum codes are deliberately separate, because their remedies are
+opposite. `SIZE_BELOW_MINIMUM_LOT` means raise the balance or tighten the stop.
+`SIZE_BELOW_MINIMUM_LOT_AFTER_CLAMP` means the account was large enough and a
+limit took the size away — that limit is named in `binding_constraint`, and it is
+the thing to change. Reporting the first when the second happened is how a
+breakdown sends an operator after the wrong fix.
+
+Both remain `REJECTED`. No order is authorised either way, so the verdict is
+unchanged; the distinction lives in the reason code, where it can be read without
+altering the order state machine's contract.
 
 ---
 

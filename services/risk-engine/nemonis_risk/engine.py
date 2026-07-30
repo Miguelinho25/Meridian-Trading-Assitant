@@ -193,23 +193,24 @@ class RiskEngine:
             final_size = Decimal(0)
             binding = failures[0].code
         elif final_size < ctx.market.spec.min_lot:
+            # Reaching here means a clamp is responsible, always. An account that
+            # genuinely cannot fund one minimum lot fails earlier, inside
+            # calculate_position_size, and arrives as a failure in the branch
+            # above. So base_size >= min_lot held, and only a clamp can have taken
+            # it below. Reporting SIZE_BELOW_MINIMUM_LOT here would name the
+            # symptom and hide the limit that caused it — and the two have
+            # opposite remedies, so an operator would tune the wrong one.
             verdict = RiskVerdict.REJECTED
+            binding, failure = _below_min_lot(
+                ctx, _binding_clamp(clamps), base_size=base_size, final_size=final_size
+            )
             final_size = Decimal(0)
-            binding = RejectionCode.SIZE_BELOW_MINIMUM_LOT
-            failures = [
-                RuleOutcome(
-                    code=RejectionCode.SIZE_BELOW_MINIMUM_LOT,
-                    passed=False,
-                    detail=(
-                        f"After clamping, size falls below the "
-                        f"{ctx.market.spec.min_lot} minimum lot."
-                    ),
-                )
-            ]
+            failures = [failure]
             outcomes.extend(failures)
         elif final_size < base_size:
             verdict = RiskVerdict.APPROVED_REDUCED
-            binding = min(clamps, key=lambda o: o.clamp_to_lots or Decimal(0)).code
+            bound = _binding_clamp(clamps)
+            binding = bound.code if bound else None
         elif band.risk_multiplier < Decimal(1):
             verdict = RiskVerdict.APPROVED_REDUCED
             binding = RejectionCode.DRAWDOWN_THROTTLE
@@ -250,6 +251,66 @@ class RiskEngine:
             evaluated_at=evaluated_at,
             outcomes=tuple(outcomes),
         )
+
+
+def _binding_clamp(clamps: list[RuleOutcome]) -> RuleOutcome | None:
+    """The most restrictive clamp — the one that actually set the final size."""
+    if not clamps:
+        return None
+    return min(clamps, key=lambda o: o.clamp_to_lots or Decimal(0))
+
+
+def _below_min_lot(
+    ctx: RiskContext,
+    bound: RuleOutcome | None,
+    *,
+    base_size: Decimal,
+    final_size: Decimal,
+) -> tuple[RejectionCode, RuleOutcome]:
+    """Attribute a sub-minimum size to its actual cause.
+
+    Two operationally different events share this outcome, and conflating them
+    sends the operator after the wrong fix:
+
+    * A clamp shrank a fundable size to nothing. The remedy is that clamp's
+      limit — so it is what ``binding_constraint`` reports.
+    * The account cannot fund one minimum lot at all. The remedy is the balance
+      or the stop distance.
+
+    The returned code is what the decision binds to; the outcome carries the
+    min-lot fact, so both survive into ``reason_codes`` and the explanation.
+    """
+    min_lot = ctx.market.spec.min_lot
+    if bound is None:
+        # Defensive: calculate_position_size rejects an unfundable size before we
+        # get here, so this is unreachable unless that changes. Report the account
+        # cause rather than inventing a clamp.
+        return RejectionCode.SIZE_BELOW_MINIMUM_LOT, RuleOutcome(
+            code=RejectionCode.SIZE_BELOW_MINIMUM_LOT,
+            passed=False,
+            detail=(
+                f"Size {final_size} is below the {min_lot} minimum lot with no "
+                f"clamp applied — the account cannot fund one minimum lot at this "
+                f"risk and stop distance."
+            ),
+            before=str(base_size),
+            after=str(final_size),
+            limit=str(min_lot),
+        )
+
+    return bound.code, RuleOutcome(
+        code=RejectionCode.SIZE_BELOW_MINIMUM_LOT_AFTER_CLAMP,
+        passed=False,
+        detail=(
+            f"{bound.code.value} clamped {base_size} lots to {final_size}, below "
+            f"the {min_lot} minimum lot, so no order can be placed. The account "
+            f"funded {base_size} lots before clamping — the limit is the cause, "
+            f"not the balance. {bound.detail}"
+        ),
+        before=str(base_size),
+        after=str(final_size),
+        limit=bound.limit,
+    )
 
 
 def _explain(

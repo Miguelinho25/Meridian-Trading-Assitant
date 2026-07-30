@@ -180,6 +180,13 @@ class RejectionCode(StrEnum):
 
     # Sizing and integrity
     SIZE_BELOW_MINIMUM_LOT = "SIZE_BELOW_MINIMUM_LOT"
+    #: Distinct from the above because the remedy is the opposite. Bare
+    #: SIZE_BELOW_MINIMUM_LOT means the account cannot fund one minimum lot over
+    #: this stop — raise the balance or tighten the stop. This one means the
+    #: account could, and a clamp took the size away; the fix is the clamp's
+    #: limit, named in ``binding_constraint``. Added, not repurposed: the string
+    #: above keeps its meaning in every audit record already written.
+    SIZE_BELOW_MINIMUM_LOT_AFTER_CLAMP = "SIZE_BELOW_MINIMUM_LOT_AFTER_CLAMP"
     SIZING_INVARIANT_VIOLATED = "SIZING_INVARIANT_VIOLATED"
     FX_CONVERSION_UNAVAILABLE = "FX_CONVERSION_UNAVAILABLE"
     PROPOSAL_HASH_MISMATCH = "PROPOSAL_HASH_MISMATCH"

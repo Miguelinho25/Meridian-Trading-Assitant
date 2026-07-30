@@ -334,6 +334,133 @@ class TestTierC_ExposureClamps:
         assert decision.final_size_lots < baseline.final_size_lots
 
 
+class TestSubMinimumLotAttribution:
+    """A sub-minimum size has two causes with opposite remedies.
+
+    "The account is too small" points at the balance or the stop distance. "A
+    clamp took the size away" points at the limit that clamped. Reporting the
+    first when the second happened sends the operator to tune the wrong dial —
+    and on a persisted paper session this was 51% of all rejections.
+    """
+
+    @staticmethod
+    def _cluster_nearly_full() -> PortfolioState:
+        """USD_MAJOR at 0.748% against CHALLENGE's 0.75% cap.
+
+        Leaves ~0.002% of room, so the clamp scales a fundable 1.16 lots to
+        essentially nothing.
+        """
+        return PortfolioState(
+            open_positions=(
+                OpenPosition(
+                    instrument="GBPUSD",
+                    direction=Direction.LONG,
+                    lots=Decimal("1"),
+                    entry=Decimal("1.265"),
+                    stop=Decimal("1.260"),
+                    strategy_id="other",
+                    open_risk_pct=Decimal("0.748"),
+                ),
+            )
+        )
+
+    def test_clamped_rejection_names_the_clamp_not_the_minimum_lot(self, engine, now) -> None:
+        ctx = make_context(portfolio=self._cluster_nearly_full())
+        decision = engine.evaluate(ctx, evaluated_at=now)
+
+        assert decision.verdict is RiskVerdict.REJECTED
+        assert decision.final_size_lots == 0
+        # The clamp is the actionable cause, so it is what binds.
+        assert decision.binding_constraint is RejectionCode.MAX_CORRELATED_EXPOSURE
+        assert decision.binding_constraint is not RejectionCode.SIZE_BELOW_MINIMUM_LOT
+
+    def test_the_smallest_clamp_binds_when_several_apply(self, engine, now) -> None:
+        """Currency exposure also clamps here; correlated exposure clamps harder."""
+        decision = engine.evaluate(
+            make_context(portfolio=self._cluster_nearly_full()), evaluated_at=now
+        )
+        assert RejectionCode.MAX_CURRENCY_EXPOSURE in decision.reason_codes
+        assert decision.binding_constraint is RejectionCode.MAX_CORRELATED_EXPOSURE
+
+    def test_clamped_rejection_still_records_the_min_lot_fact(self, engine, now) -> None:
+        """Naming the clamp must not lose why the clamped size was unusable."""
+        decision = engine.evaluate(
+            make_context(portfolio=self._cluster_nearly_full()), evaluated_at=now
+        )
+        assert RejectionCode.SIZE_BELOW_MINIMUM_LOT_AFTER_CLAMP in decision.reason_codes
+        assert RejectionCode.SIZE_BELOW_MINIMUM_LOT not in decision.reason_codes
+
+    def test_explanation_names_the_clamp_and_the_minimum(self, engine, now) -> None:
+        decision = engine.evaluate(
+            make_context(portfolio=self._cluster_nearly_full()), evaluated_at=now
+        )
+        assert "MAX_CORRELATED_EXPOSURE" in decision.explanation
+        assert "minimum lot" in decision.explanation
+        # The clamp's own numbers survive, so the limit is visible without a second query.
+        assert "0.75% cap" in decision.explanation
+        assert "1.16 lots" in decision.explanation
+
+    def test_explanation_does_not_blame_the_balance(self, engine, now) -> None:
+        """The regression this guards: an operator reading "account too small"."""
+        decision = engine.evaluate(
+            make_context(portfolio=self._cluster_nearly_full()), evaluated_at=now
+        )
+        assert "account is too small" not in decision.explanation
+
+    def test_a_genuinely_small_account_still_reports_the_account_cause(self, engine, now) -> None:
+        """The other cause must keep its own code — this is the case where
+        raising the balance or tightening the stop really is the fix."""
+        tiny = make_account(
+            balance=Decimal("500"),
+            equity=Decimal("500"),
+            high_water_mark=Decimal("500"),
+            daily_loss_limit=Decimal("25"),
+            total_loss_limit=Decimal("50"),
+        )
+        decision = engine.evaluate(make_context(account=tiny), evaluated_at=now)
+
+        assert decision.verdict is RiskVerdict.REJECTED
+        assert decision.binding_constraint is RejectionCode.SIZE_BELOW_MINIMUM_LOT
+        assert RejectionCode.SIZE_BELOW_MINIMUM_LOT_AFTER_CLAMP not in decision.reason_codes
+        assert "account is too small" in decision.explanation
+
+    def test_a_very_wide_stop_reports_the_account_cause_too(self, engine, now) -> None:
+        """A stop so wide the account cannot fund a minimum lot over it.
+
+        ``binding_constraint`` is STOP_TOO_WIDE — a wider problem that outranks
+        sizing — but the account cause must still be recorded, and must not be
+        mistaken for a clamp.
+        """
+        wide = make_proposal(stop=Decimal("0.70000"), target=Decimal("2.00000"))
+        decision = engine.evaluate(make_context(proposal=wide), evaluated_at=now)
+
+        assert RejectionCode.SIZE_BELOW_MINIMUM_LOT in decision.reason_codes
+        assert RejectionCode.SIZE_BELOW_MINIMUM_LOT_AFTER_CLAMP not in decision.reason_codes
+
+    def test_a_clamp_that_leaves_a_tradeable_size_is_still_approved_reduced(
+        self, engine, now
+    ) -> None:
+        """The boundary: clamping only rejects when nothing tradeable remains."""
+        roomier = PortfolioState(
+            open_positions=(
+                OpenPosition(
+                    instrument="GBPUSD",
+                    direction=Direction.LONG,
+                    lots=Decimal("1"),
+                    entry=Decimal("1.265"),
+                    stop=Decimal("1.260"),
+                    strategy_id="other",
+                    open_risk_pct=Decimal("0.50"),
+                ),
+            )
+        )
+        decision = engine.evaluate(make_context(portfolio=roomier), evaluated_at=now)
+
+        assert decision.verdict is RiskVerdict.APPROVED_REDUCED
+        assert decision.final_size_lots >= Decimal("0.01")
+        assert RejectionCode.SIZE_BELOW_MINIMUM_LOT_AFTER_CLAMP not in decision.reason_codes
+
+
 class TestTierD_QualityGates:
     def test_poor_reward_risk_blocks(self, engine, now) -> None:
         weak = make_proposal(target=Decimal("1.08600"))  # 0.33:1

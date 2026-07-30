@@ -29,14 +29,18 @@ const VERDICT_TONE: Record<string, string> = {
  */
 const MEANING: Record<string, string> = {
   SIZE_BELOW_MINIMUM_LOT:
-    "The authorised risk bought less than one minimum lot. Usually a clamp reduced the size first rather than the account being too small — the engine does not yet report which clamp.",
+    "The account cannot fund one minimum lot over this stop. Raise the balance or tighten the stop — this is not a limit binding.",
+  SIZE_BELOW_MINIMUM_LOT_AFTER_CLAMP:
+    "The account could fund the trade, then a limit clamped the size below one minimum lot. The limit that bound is the reason code on this row — change that, not the balance.",
   BELOW_MIN_CONFIDENCE:
     "The strategy's own confidence sat under the profile's floor. Tightened further by the drawdown throttle.",
   MAX_CORRELATED_EXPOSURE:
-    "Approved at a reduced size because correlated open risk was near its ceiling.",
+    "Correlated open risk was near its ceiling, so the size was cut to fit — or rejected outright if nothing tradeable was left.",
   MAX_SIMULTANEOUS_POSITIONS: "The position count was already at the profile's limit.",
-  MAX_STRATEGY_BUDGET: "This strategy's own risk allocation was nearly spent.",
-  MAX_INSTRUMENT_EXPOSURE: "Open risk on this instrument was near its ceiling.",
+  MAX_STRATEGY_BUDGET:
+    "This strategy's own risk allocation was nearly spent, so the size was cut to fit — or rejected outright if nothing tradeable was left.",
+  MAX_INSTRUMENT_EXPOSURE:
+    "Open risk on this instrument was near its ceiling, so the size was cut to fit — or rejected outright if nothing tradeable was left.",
   DRAWDOWN_THROTTLE:
     "Size cut because drawdown had consumed part of the allowance. Recovery is convex against the account, so size falls as the hole deepens.",
   ACCOUNT_STATE_AMBIGUOUS:
