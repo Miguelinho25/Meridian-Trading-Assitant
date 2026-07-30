@@ -92,6 +92,12 @@ allowed-confusables = ["×", "—", "–", "…"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S101", "N801", "RUF012"]
+# Alembic's template supplies op, sa and nemonis_db.types to every generated
+# migration, and sorts them its own way. A migration that happens not to need one
+# is not defective, and hand-editing generated files to satisfy the linter is
+# churn that recurs on every schema change — it was fixed by hand three times
+# before this exemption existed.
+"migrations/versions/*.py" = ["F401", "I001"]
 
 [tool.mypy]
 python_version = "3.12"
