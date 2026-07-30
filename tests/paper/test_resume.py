@@ -287,3 +287,62 @@ class TestAppendOnlyRecords:
         assert await record_trades(session, "ps_1", [trade]) == 1
         assert await record_trades(session, "ps_1", [trade]) == 0
         assert len(await get_trades(session, "ps_1")) == 1
+
+
+class TestDenormalisedCountersSurviveResume:
+    """A restored session's broker starts with an empty closed-trades list --
+    those trades live in paper_trades, not in memory. A counter taken from memory
+    alone under-reports everything from before the restart, which is what the
+    runner did: it wrote 629 against 713 stored rows."""
+
+    async def test_the_trade_count_must_include_pre_restart_trades(
+        self, session: AsyncSession
+    ) -> None:
+        live = await a_running_session(100)
+        first_run = len(live.closed_trades)
+        assert first_run > 0, "no trades in the first run — this proves nothing"
+
+        await save_snapshot(session, a_snapshot(live, closed_trade_count=first_run))
+
+        # Resume: a fresh session with restored exposure but no in-memory trades.
+        snap = await load_snapshot(session, "ps_1")
+        assert snap is not None
+        resumed = a_session()
+        resumed.restore(
+            {
+                "balance": snap.balance,
+                "equity": snap.equity,
+                "high_water_mark": snap.high_water_mark,
+                "balance_at_day_start": snap.balance_at_day_start,
+                "highest_equity_today": snap.highest_equity_today,
+                "realised_pnl": snap.realised_pnl,
+                "total_commission": snap.total_commission,
+                "trading_day": snap.trading_day,
+                "ticks": snap.ticks,
+                "last_tick_at": snap.last_tick_at,
+                "positions": [asdict(p) for p in snap.positions],
+                "working_orders": [asdict(o) for o in snap.working_orders],
+            }
+        )
+        assert resumed.closed_trades == [], (
+            "restore reinstated closed trades into memory; they are persisted "
+            "separately and would then be double-counted"
+        )
+
+        # The runner carries the prior count forward. Writing len(closed_trades)
+        # here would report 0 for a session that has traded.
+        carried = snap.closed_trade_count + len(resumed.closed_trades)
+        assert carried == first_run
+
+    async def test_a_snapshot_after_resume_does_not_lose_the_count(
+        self, session: AsyncSession
+    ) -> None:
+        live = await a_running_session(100)
+        first_run = len(live.closed_trades)
+        await save_snapshot(session, a_snapshot(live, closed_trade_count=first_run))
+
+        resumed = a_session()
+        await save_snapshot(session, a_snapshot(resumed, closed_trade_count=first_run + 0))
+        snap = await load_snapshot(session, "ps_1")
+        assert snap is not None
+        assert snap.closed_trade_count == first_run

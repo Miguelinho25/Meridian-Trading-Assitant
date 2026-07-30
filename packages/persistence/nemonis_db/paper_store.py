@@ -151,6 +151,8 @@ class SessionSnapshot:
     updated_at: datetime
 
     prop_profile_id: str = ""
+    #: REPLAY or LIVE. See the column comment on PaperSessionRow.
+    bar_source: str = "REPLAY"
     instruments: list[str] = field(default_factory=list)
     timeframe: str = ""
     strategy_keys: list[str] = field(default_factory=list)
@@ -192,6 +194,7 @@ async def save_snapshot(session: AsyncSession, snap: SessionSnapshot) -> None:
     row.timeframe = snap.timeframe
     row.strategy_keys = _json(snap.strategy_keys)
     row.seed = snap.seed
+    row.bar_source = snap.bar_source
     row.account_currency = snap.account_currency
     row.starting_balance = snap.starting_balance
     row.balance = snap.balance
@@ -302,6 +305,7 @@ async def load_snapshot(session: AsyncSession, session_id: str) -> SessionSnapsh
         timeframe=row.timeframe,
         strategy_keys=_list(row.strategy_keys),
         seed=row.seed,
+        bar_source=row.bar_source,
         account_currency=row.account_currency,
         starting_balance=row.starting_balance,
         balance=row.balance,
@@ -488,6 +492,7 @@ def snapshot_metadata(row: PaperSessionRow) -> dict[str, Any]:
         "status": row.status,
         "mode": row.mode,
         "instruments": _list(row.instruments),
+        "bar_source": row.bar_source,
         "ticks": row.ticks,
         "balance": row.balance,
         "equity": row.equity,

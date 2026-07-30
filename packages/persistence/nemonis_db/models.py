@@ -512,6 +512,11 @@ class PaperSessionRow(Base):
     timeframe: Mapped[str] = mapped_column(String(10), default="")
     strategy_keys: Mapped[str] = mapped_column(Text, default="[]")  # JSON array
     seed: Mapped[int] = mapped_column(Integer, default=0)
+    #: REPLAY or LIVE. A session fed historical bars at speed behaves identically
+    #: to one fed a live feed, which is exactly why it must be labelled: without
+    #: this, a replay's equity curve is indistinguishable from real paper
+    #: performance. Same discipline as SYNTHETIC vs REAL on backtest provenance.
+    bar_source: Mapped[str] = mapped_column(String(20), default="REPLAY", index=True)
 
     account_currency: Mapped[str] = mapped_column(String(10))
     starting_balance: Mapped[Decimal] = mapped_column(DecimalText)
