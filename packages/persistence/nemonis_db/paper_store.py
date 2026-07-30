@@ -23,10 +23,11 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from nemonis_db.models import (
+    PaperDecision,
     PaperEquityPoint,
     PaperPosition,
     PaperSessionRow,
@@ -439,6 +440,63 @@ async def record_trades(
         written += 1
     await session.flush()
     return written
+
+
+@dataclass(slots=True)
+class DecisionRow:
+    at: datetime
+    strategy_id: str
+    verdict: str
+    reason_code: str = ""
+
+
+async def record_decisions(
+    session: AsyncSession, session_id: str, decisions: list[DecisionRow]
+) -> int:
+    """Append risk decisions. Never updates: a decision is a finished fact."""
+    for d in decisions:
+        session.add(
+            PaperDecision(
+                session_id=session_id,
+                at=d.at,
+                strategy_id=d.strategy_id,
+                verdict=d.verdict,
+                reason_code=d.reason_code,
+            )
+        )
+    await session.flush()
+    return len(decisions)
+
+
+async def decision_breakdown(session: AsyncSession, session_id: str) -> list[tuple[str, str, int]]:
+    """(verdict, reason_code, count), most frequent first.
+
+    The answer to "why is it not trading?" -- which a bare rejection count cannot
+    give.
+    """
+    query = (
+        select(
+            PaperDecision.verdict,
+            PaperDecision.reason_code,
+            func.count().label("n"),
+        )
+        .where(PaperDecision.session_id == session_id)
+        .group_by(PaperDecision.verdict, PaperDecision.reason_code)
+        .order_by(func.count().desc())
+    )
+    return [(v, r, n) for v, r, n in (await session.execute(query)).all()]
+
+
+async def recent_decisions(
+    session: AsyncSession, session_id: str, *, limit: int = 100
+) -> list[PaperDecision]:
+    query = (
+        select(PaperDecision)
+        .where(PaperDecision.session_id == session_id)
+        .order_by(PaperDecision.at.desc(), PaperDecision.id.desc())
+        .limit(limit)
+    )
+    return list((await session.execute(query)).scalars().all())
 
 
 async def list_sessions(session: AsyncSession, *, limit: int = 20) -> list[PaperSessionRow]:

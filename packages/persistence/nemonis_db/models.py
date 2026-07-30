@@ -664,3 +664,29 @@ class PaperTrade(Base):
     __table_args__ = (
         CheckConstraint("direction IN ('LONG', 'SHORT')", name="ck_paper_trade_direction"),
     )
+
+
+class PaperDecision(Base):
+    """One risk decision, approved or not.
+
+    Rejections are the point. A system that records only what it did cannot say
+    what it declined or why, and "why is it not trading?" is the most common
+    question asked of a running session. A 4,313-tick replay produced 10,960
+    decisions of which 10,245 were rejections — that distribution is the richest
+    diagnostic data the platform holds, and it was being counted and discarded.
+
+    Append-only: a decision is a finished fact.
+    """
+
+    __tablename__ = "paper_decisions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    session_id: Mapped[str] = mapped_column(String(40), ForeignKey("paper_sessions.id"), index=True)
+    at: Mapped[datetime] = mapped_column(UTCDateTime, index=True)
+    strategy_id: Mapped[str] = mapped_column(String(80), index=True)
+    verdict: Mapped[str] = mapped_column(String(30), index=True)
+    #: The rule that bound. Empty for a clean approval — the absence is
+    #: meaningful, so it is not backfilled with a placeholder.
+    reason_code: Mapped[str] = mapped_column(String(60), default="", index=True)
+
+    __table_args__ = (Index("ix_paper_decision_session_reason", "session_id", "reason_code"),)

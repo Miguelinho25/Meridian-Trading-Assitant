@@ -40,10 +40,12 @@ from nemonis_config.settings import ApprovalMode, Mode
 from nemonis_db import session_scope
 from nemonis_db.paper_store import (
     ClosedTradeRow,
+    DecisionRow,
     PositionRow,
     SessionSnapshot,
     WorkingOrderRow,
     load_snapshot,
+    record_decisions,
     record_equity,
     record_trades,
     save_snapshot,
@@ -321,6 +323,23 @@ async def main() -> int:
                 drawdown_pct=drawdown,
                 open_positions=len(session.account.positions),
             )
+            # Every decision, not just the approvals. The rejection reasons are
+            # what answer "why is it not trading?", and an aggregate count cannot.
+            if outcome.decisions:
+                await record_decisions(
+                    db,
+                    session_id,
+                    [
+                        DecisionRow(
+                            at=when,
+                            strategy_id=strategy_id,
+                            verdict=verdict,
+                            reason_code=reason,
+                        )
+                        for when, strategy_id, verdict, reason in outcome.decisions
+                    ],
+                )
+
             if outcome.closed_trades:
                 await record_trades(
                     db,

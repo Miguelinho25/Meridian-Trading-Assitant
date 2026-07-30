@@ -16,13 +16,17 @@ import pytest
 from nemonis_config.settings import ApprovalMode, Mode, RiskProfileName
 from nemonis_db.paper_store import (
     ClosedTradeRow,
+    DecisionRow,
     PositionRow,
     SessionSnapshot,
     WorkingOrderRow,
+    decision_breakdown,
     get_equity_curve,
     get_positions,
     get_trades,
     load_snapshot,
+    recent_decisions,
+    record_decisions,
     record_equity,
     record_trades,
     save_snapshot,
@@ -346,3 +350,61 @@ class TestDenormalisedCountersSurviveResume:
         snap = await load_snapshot(session, "ps_1")
         assert snap is not None
         assert snap.closed_trade_count == first_run
+
+
+class TestDecisionsAreRecordedNotJustCounted:
+    """The runner counted rejections and discarded their reasons. A system that
+    records only what it did cannot say what it declined, or why — and 'why is it
+    not trading?' is the most common question asked of a running session."""
+
+    async def test_rejections_are_stored_with_their_reason(self, session: AsyncSession) -> None:
+        live = await a_running_session(120)
+        await save_snapshot(session, a_snapshot(live))
+
+        # Replay the tick decisions the runner would have written.
+        #
+        # One session across the whole loop, not a fresh one per tick: a new
+        # session has no history, never clears warmup, and therefore produces no
+        # decisions at all — which made an earlier version of this test skip and
+        # prove nothing.
+        replay = a_session("ps_replay")
+        rows = [
+            DecisionRow(at=when, strategy_id=sid, verdict=verdict, reason_code=reason)
+            for moment, bars in bars_upto(120)
+            for when, sid, verdict, reason in replay.tick(bars, at=moment).decisions
+        ]
+        assert rows, "no decisions produced — this test would prove nothing"
+
+        await record_decisions(session, "ps_1", rows)
+        stored = await recent_decisions(session, "ps_1", limit=1000)
+        assert len(stored) == len(rows)
+        assert any(d.verdict == "REJECTED" for d in stored)
+        assert any(d.reason_code for d in stored), "no reason codes survived"
+
+    async def test_the_breakdown_aggregates_by_reason(self, session: AsyncSession) -> None:
+        live = await a_running_session(60)
+        await save_snapshot(session, a_snapshot(live))
+        await record_decisions(
+            session,
+            "ps_1",
+            [
+                DecisionRow(at=T, strategy_id="a", verdict="REJECTED", reason_code="X"),
+                DecisionRow(at=T, strategy_id="a", verdict="REJECTED", reason_code="X"),
+                DecisionRow(at=T, strategy_id="b", verdict="APPROVED", reason_code=""),
+            ],
+        )
+        breakdown = await decision_breakdown(session, "ps_1")
+        assert ("REJECTED", "X", 2) in breakdown
+        assert ("APPROVED", "", 1) in breakdown
+        # Most frequent first, so the dominant blocker leads.
+        assert breakdown[0][2] >= breakdown[-1][2]
+
+    async def test_a_clean_approval_carries_no_reason_code(self, session: AsyncSession) -> None:
+        """The absence is meaningful, so it is not backfilled with a placeholder."""
+        live = await a_running_session(60)
+        await save_snapshot(session, a_snapshot(live))
+        await record_decisions(
+            session, "ps_1", [DecisionRow(at=T, strategy_id="a", verdict="APPROVED")]
+        )
+        stored = await recent_decisions(session, "ps_1")
+        assert stored[0].reason_code == ""
