@@ -8,8 +8,8 @@ import { RiskIndicator } from "./RiskIndicator";
 
 const NAV = [
   { label: "Command Centre", href: "/", ready: true },
-  { label: "Live Market", href: "/market", ready: false },
-  { label: "Proposals", href: "/proposals", ready: false },
+  { label: "Live Market", href: "/market", ready: true },
+  { label: "Proposals", href: "/proposals", ready: true },
   { label: "Risk Lab", href: "/risk", ready: true },
   { label: "Prop Firm", href: "/prop-firm", ready: true },
   { label: "Backtest Lab", href: "/backtest", ready: true },

@@ -297,8 +297,91 @@ export const propFirmProfileSchema = z.object({
 
 export type PropFirmProfile = z.infer<typeof propFirmProfileSchema>;
 
+export const paperSessionSchema = z.object({
+  id: z.string(),
+  status: z.string(),
+  mode: z.string(),
+  bar_source: z.string(),
+  instruments: z.array(z.string()),
+  timeframe: z.string(),
+  starting_balance: z.string(),
+  balance: z.string(),
+  equity: z.string(),
+  ticks: z.number(),
+  closed_trade_count: z.number(),
+  open_position_count: z.number(),
+  last_tick_at: z.string().nullable(),
+  started_at: z.string(),
+  halt_reason: z.string(),
+});
+
+export const paperPositionSchema = z.object({
+  position_id: z.string(),
+  instrument: z.string(),
+  direction: z.string(),
+  lots: z.string(),
+  entry_price: z.string(),
+  opened_at: z.string(),
+  strategy_id: z.string(),
+  stop_loss: z.string().nullable(),
+  take_profit: z.string().nullable(),
+});
+
+export const paperSessionDetailSchema = paperSessionSchema.extend({
+  approval_mode: z.string(),
+  risk_profile: z.string(),
+  prop_profile_id: z.string(),
+  strategy_keys: z.array(z.string()),
+  high_water_mark: z.string(),
+  balance_at_day_start: z.string(),
+  realised_pnl: z.string(),
+  total_commission: z.string(),
+  signals_generated: z.number(),
+  proposals_made: z.number(),
+  orders_submitted: z.number(),
+  rejections: z.number(),
+  working_order_count: z.number(),
+  positions: z.array(paperPositionSchema),
+});
+
+export const decisionGroupSchema = z.object({
+  verdict: z.string(),
+  reason_code: z.string(),
+  count: z.number(),
+  share: z.string(),
+});
+
+export const paperTradeSchema = z.object({
+  trade_id: z.string(),
+  instrument: z.string(),
+  direction: z.string(),
+  lots: z.string(),
+  entry_price: z.string(),
+  exit_price: z.string(),
+  opened_at: z.string(),
+  closed_at: z.string(),
+  pnl: z.string(),
+  exit_reason: z.string(),
+  mfe_pips: z.string().nullable(),
+  mae_pips: z.string().nullable(),
+});
+
+export type PaperSession = z.infer<typeof paperSessionSchema>;
+export type PaperSessionDetail = z.infer<typeof paperSessionDetailSchema>;
+export type PaperPosition = z.infer<typeof paperPositionSchema>;
+export type DecisionGroup = z.infer<typeof decisionGroupSchema>;
+export type PaperTrade = z.infer<typeof paperTradeSchema>;
+
 export const api = {
   health: () => request("/health", healthSchema),
+  paperSessions: () => request("/api/paper", z.array(paperSessionSchema)),
+  paperSession: (id: string) => request(`/api/paper/${id}`, paperSessionDetailSchema),
+  paperEquity: (id: string) =>
+    request(`/api/paper/${id}/equity`, z.array(equityPointSchema)),
+  paperTrades: (id: string) =>
+    request(`/api/paper/${id}/trades`, z.array(paperTradeSchema)),
+  paperDecisions: (id: string) =>
+    request(`/api/paper/${id}/decisions`, z.array(decisionGroupSchema)),
   propFirm: () => request("/api/prop-firm", z.array(propFirmProfileSchema)),
   strategies: () => request("/api/strategies", registrySchema),
   backtests: () => request("/api/backtests", z.array(runSummarySchema)),

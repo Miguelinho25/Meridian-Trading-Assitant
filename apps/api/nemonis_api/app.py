@@ -25,6 +25,7 @@ from nemonis_schemas.enums import AuditEventType
 from nemonis_api.backtests import router as backtests_router
 from nemonis_api.health import router as health_router
 from nemonis_api.middleware import RequestContextMiddleware
+from nemonis_api.paper import router as paper_router
 from nemonis_api.propfirm import router as propfirm_router
 from nemonis_api.risk import router as risk_router
 from nemonis_api.strategies import router as strategies_router
@@ -114,6 +115,7 @@ def create_app() -> FastAPI:
     app.include_router(backtests_router)
     app.include_router(strategies_router)
     app.include_router(propfirm_router)
+    app.include_router(paper_router)
     return app
 
 
