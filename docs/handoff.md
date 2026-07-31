@@ -11,10 +11,31 @@ is either verifiable by running something, or is marked as not done.
 traded.** The platform measures, records, halts and refuses correctly. What it
 measures shows no edge.
 
-The most recent full replay over 2010–2026 daily data ended at **92,662 from a
-100,000 opening balance**. The most recent recorded backtest set: 9 runs, **0
-reproducible, 0 validated, 0 qualifying as evidence**. That is the system working
-as designed, not failing.
+### The first validated run
+
+Five pairs, 2010–2026 daily, run against a pinned commit so it is reproducible:
+
+```
+950 trades · net -5,698 · profit factor 0.90 · max drawdown 10.3%
+
+WALK-FORWARD   3 of 6 windows profitable, 50% consistency
+MONTE CARLO    prop-firm pass probability   0.1%   (10,000 reshuffles)
+               ruin probability             8.0%
+               median max drawdown          9.0%    p95  11.6%
+STRESS         survives all scenarios: NO
+               double spread     -6,069   +7% worse than baseline
+               missing bars      -6,232   +9% worse
+               double slippage   -5,738   +1% worse
+```
+
+**A 0.1% chance of passing a prop evaluation.** Not a marginal edge — no edge.
+
+The stress numbers carry a finding of their own, and it corrects an earlier
+assumption in this document's own recommendations: **costs are not what is wrong
+here.** Doubling the spread costs another 7%; the strategy was already losing.
+Real bid/ask data will matter for a future strategy with a thin edge, but it is
+not the binding constraint on these baselines. They simply do not work, exactly
+as their own hypotheses say they will not.
 
 Both bundled strategies are labelled in their own hypotheses as baselines and
 controls — *"not a candidate for capital"* — and are registered `CANDIDATE`, not
