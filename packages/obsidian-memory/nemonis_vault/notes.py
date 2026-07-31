@@ -282,10 +282,15 @@ def extract_user_fields(note: str) -> dict[str, str]:
     or the audit log.
     """
     fields: dict[str, str] = {}
+    # [ \t]* rather than \s*: \s* consumes the newline that separates one label
+    # from the next, so an *empty* field swallowed the following label as its own
+    # value — an untouched note reported what_worked="**What failed:**", and that
+    # text would then travel back toward the database as if the operator had
+    # written it. Only same-line whitespace may be skipped.
     patterns = {
-        "what_worked": r"\*\*What worked:\*\*\s*(.*?)(?=\n\n|\n\*\*|$)",
-        "what_failed": r"\*\*What failed:\*\*\s*(.*?)(?=\n\n|\n\*\*|$)",
-        "lesson": r"\*\*Lesson:\*\*\s*(.*?)(?=\n\n|\n\*\*|$)",
+        "what_worked": r"\*\*What worked:\*\*[ \t]*(.*?)(?=\n\n|\n\*\*|$)",
+        "what_failed": r"\*\*What failed:\*\*[ \t]*(.*?)(?=\n\n|\n\*\*|$)",
+        "lesson": r"\*\*Lesson:\*\*[ \t]*(.*?)(?=\n\n|\n\*\*|$)",
     }
     for name, pattern in patterns.items():
         match = re.search(pattern, note, re.DOTALL)

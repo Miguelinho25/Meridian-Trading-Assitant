@@ -422,8 +422,85 @@ async function post<T>(path: string, body: unknown, schema: z.ZodType<T>): Promi
   return parsed.data;
 }
 
+export const noteSummarySchema = z.object({
+  filename: z.string(),
+  folder: z.string(),
+  note_id: z.string(),
+  note_type: z.string(),
+  instrument: z.string(),
+  direction: z.string(),
+  strategy: z.string(),
+  session: z.string(),
+  pnl: z.string(),
+  generated_at: z.string(),
+  synthetic: z.boolean(),
+  has_notes: z.boolean(),
+});
+
+export const noteDetailSchema = noteSummarySchema.extend({
+  machine_fields: z.record(z.string(), z.string()),
+  user_fields: z.record(z.string(), z.string()),
+  body: z.string(),
+});
+
+export const vaultStatusSchema = z.object({
+  path: z.string(),
+  exists: z.boolean(),
+  sync_enabled: z.boolean(),
+  note_count: z.number(),
+  folders: z.array(z.string()),
+  notice: z.string(),
+});
+
+export const versionsSchema = z.object({
+  product: z.string(),
+  version: z.string(),
+  environment: z.string(),
+  engine: z.string(),
+  feature_pipeline: z.string(),
+  risk_profiles: z.string(),
+  manifest_schema: z.string(),
+});
+
+export const systemConfigSchema = z.object({
+  mode: z.string(),
+  approval_mode: z.string(),
+  risk_profile: z.string(),
+  broker_execution_enabled: z.boolean(),
+  storage_backend: z.string(),
+  market_data_provider: z.string(),
+  vault_path: z.string(),
+  vault_sync_enabled: z.boolean(),
+  ollama_enabled: z.boolean(),
+  ollama_model: z.string(),
+  providers: z.record(z.string(), z.string()),
+});
+
+export const auditSchema = z.object({
+  valid: z.boolean(),
+  events: z.number(),
+  head: z.string(),
+  broken_at: z.string(),
+  detail: z.string(),
+  notice: z.string(),
+});
+
+export type NoteSummary = z.infer<typeof noteSummarySchema>;
+export type NoteDetail = z.infer<typeof noteDetailSchema>;
+export type VaultStatus = z.infer<typeof vaultStatusSchema>;
+export type Versions = z.infer<typeof versionsSchema>;
+export type SystemConfig = z.infer<typeof systemConfigSchema>;
+export type AuditStatus = z.infer<typeof auditSchema>;
+
 export const api = {
   health: () => request("/health", healthSchema),
+  journal: () => request("/api/journal?limit=200", z.array(noteSummarySchema)),
+  journalStatus: () => request("/api/journal/status", vaultStatusSchema),
+  note: (folder: string, filename: string) =>
+    request(`/api/journal/${folder ? folder + "/" : ""}${filename}`, noteDetailSchema),
+  versions: () => request("/api/system/versions", versionsSchema),
+  systemConfig: () => request("/api/system/config", systemConfigSchema),
+  auditStatus: () => request("/api/system/audit", auditSchema),
   killSwitch: () => request("/api/kill-switch", killSwitchStateSchema),
   engageKillSwitch: (reason: string) =>
     post("/api/kill-switch/engage", { reason, actor: "operator" }, killSwitchStateSchema),

@@ -16,11 +16,11 @@ const NAV = [
   { label: "Prop Firm", href: "/prop-firm", ready: true },
   { label: "Backtest Lab", href: "/backtest", ready: true },
   { label: "Strategy Lab", href: "/strategy", ready: true },
-  { label: "Journal", href: "/journal", ready: false },
+  { label: "Journal", href: "/journal", ready: true },
   { label: "Neural Memory", href: "/memory", ready: false },
-  { label: "Analytics", href: "/analytics", ready: false },
+  { label: "Analytics", href: "/analytics", ready: true },
   { label: "AI Research", href: "/research", ready: false },
-  { label: "System", href: "/system", ready: false },
+  { label: "System", href: "/system", ready: true },
 ];
 
 export function Shell({ children }: { children: React.ReactNode }) {

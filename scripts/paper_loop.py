@@ -60,6 +60,8 @@ from nemonis_schemas.enums import Timeframe
 from nemonis_strategy.baselines import MovingAverageTrend, VolatilityBreakout
 from nemonis_strategy.plugin import LifecycleStatus
 from nemonis_strategy.registry import StrategyRegistry
+from nemonis_vault.notes import render_trade_note, trade_note_filename
+from nemonis_vault.writer import VaultWriter
 
 REPO = Path(__file__).resolve().parents[1]
 DATA = REPO / "data" / "raw"
@@ -77,6 +79,60 @@ def _request_stop(*_: object) -> None:
     """
     global _stopping
     _stopping = True
+
+
+def open_vault() -> VaultWriter | None:
+    """The research vault, if syncing is enabled.
+
+    Returns None rather than raising when disabled or unwritable: a paper loop
+    must not stop trading because a note could not be filed. The journal is a
+    record of what happened, not a precondition for it happening.
+    """
+    settings = get_settings()
+    if not settings.vault_sync_enabled:
+        return None
+    try:
+        return VaultWriter(settings.vault_path)
+    except OSError as exc:
+        print(f"  Vault unavailable ({exc}); journal notes will not be written.")
+        return None
+
+
+def file_trade_notes(
+    vault: VaultWriter | None,
+    trades: tuple,
+    *,
+    bar_source: str,
+    at: datetime,
+) -> int:
+    """Write one note per closed trade.
+
+    ``synthetic`` is set from the bar source, not hardcoded. A REPLAY session's
+    trades never happened in a live market, and the frontmatter must say so or a
+    later query over the vault would treat them as real performance.
+    """
+    if vault is None or not trades:
+        return 0
+
+    written = 0
+    for trade in trades:
+        spec = WATCHLIST.get(trade.instrument)
+        if spec is None:
+            continue
+        try:
+            note = render_trade_note(
+                trade,
+                spec=spec,
+                generated_at=at,
+                synthetic=True,
+                rule_profile_result=f"paper session, bars: {bar_source}",
+            )
+            vault.write(trade_note_filename(trade), note, folder="trades")
+            written += 1
+        except Exception as exc:
+            # One unwritable note must not halt the loop or lose the others.
+            print(f"  Could not file a note for {trade.trade_id}: {exc}")
+    return written
 
 
 def build_registry() -> StrategyRegistry:
@@ -306,6 +362,8 @@ async def main() -> int:
 
     peak = Decimal(args.balance)
     acted = 0
+    vault = open_vault()
+    notes_written = 0
 
     halted_announced = False
 
@@ -379,6 +437,10 @@ async def main() -> int:
                     ],
                 )
 
+            notes_written += file_trade_notes(
+                vault, outcome.closed_trades, bar_source=bar_source, at=moment
+            )
+
             if outcome.closed_trades:
                 await record_trades(
                     db,
@@ -429,6 +491,8 @@ async def main() -> int:
     print(f"  trades       {stats['closed'] + this_run} ({this_run} this run)")
     print(f"  balance      {session.account.balance}")
     print(f"  open         {len(session.account.positions)} position(s)")
+    if vault is not None:
+        print(f"  notes        {notes_written} filed to {vault.root}")
     if _kill_switch_state["engaged"]:
         print("\n  KILL SWITCH ENGAGED — positions were settled, no new trade permitted.")
     return 0
