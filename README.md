@@ -3,14 +3,18 @@
 A forex research, backtesting and risk-control platform in which an LLM is one
 supervised, non-authoritative component.
 
-> **Status: engine complete, interface in progress.**
+> **Status: Milestone 1 complete. See [the handoff](docs/handoff.md).**
 >
-> The deterministic core is built and tested — market data and point-in-time
-> features, the risk engine, the order state machine and paper broker, the
-> backtest engine with its validation suite, the strategy plugin platform, and
-> the model router with retrieval. 731 tests, 11 enforced architectural
-> boundaries. The interface is being built now; several pages are still marked
-> "soon" in the navigation.
+> The deterministic core, the paper-trading loop and the interface are built:
+> market data and point-in-time features, the risk engine, the order state
+> machine and paper broker, the backtest engine with its validation suite and
+> reproducibility manifests, the strategy plugin platform, the model router with
+> retrieval, a resumable paper session, and nine working pages including a kill
+> switch that stops a running loop without a restart. 991 tests, 11 enforced
+> architectural boundaries.
+>
+> Eight of the twelve acceptance steps are complete and four are partial; the gap
+> in each is stated in [docs/handoff.md](docs/handoff.md) rather than rounded up.
 >
 > **No strategy in this repository has passed validation.** The first end-to-end
 > backtest over 2010–2026 returned an expectancy whose 95% confidence interval
