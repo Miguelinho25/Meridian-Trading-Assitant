@@ -13,7 +13,8 @@
  * is not yet measured.
  */
 
-import type { ExecutionSafety } from "@/lib/api";
+import type { ExecutionSafety, KillSwitchState } from "@/lib/api";
+import { KillSwitchControl } from "./KillSwitchControl";
 
 function Field({
   label,
@@ -52,9 +53,13 @@ function Field({
 export function RiskIndicator({
   safety,
   degraded,
+  killSwitch,
+  onKillSwitchChanged,
 }: {
   safety: ExecutionSafety | null;
   degraded: boolean;
+  killSwitch: KillSwitchState | null;
+  onKillSwitchChanged: () => void;
 }) {
   // Fail-closed presentation: if state is unknown, say so rather than
   // implying a safe value we have not confirmed.
@@ -68,7 +73,10 @@ export function RiskIndicator({
     );
   }
 
-  const killEngaged = safety.kill_switch_engaged;
+  // /health and the kill-switch endpoint both report this and are kept in
+  // agreement server-side. The dedicated reading is preferred when present
+  // because it also carries *why*, and whether the state is merely assumed.
+  const killEngaged = killSwitch?.engaged ?? safety.kill_switch_engaged;
 
   return (
     <div
@@ -111,20 +119,12 @@ export function RiskIndicator({
             Degraded
           </span>
         )}
-        <span
-          className="rounded-sm border px-2.5 py-1 text-[11px] uppercase tracking-wider"
-          style={{
-            borderColor: killEngaged ? "var(--negative)" : "var(--border-strong)",
-            color: killEngaged ? "var(--negative)" : "var(--text-secondary)",
-          }}
-          title={
-            killEngaged
-              ? "Kill switch engaged — no new trade proposals may be submitted"
-              : "Kill switch clear"
-          }
-        >
-          {killEngaged ? "Kill switch ENGAGED" : "Kill switch clear"}
-        </span>
+        <KillSwitchControl
+          engaged={killEngaged}
+          indeterminate={killSwitch?.indeterminate ?? false}
+          fromConfiguration={killSwitch?.from_configuration ?? false}
+          onChanged={onKillSwitchChanged}
+        />
       </div>
     </div>
   );

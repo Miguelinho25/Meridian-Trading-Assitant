@@ -1,7 +1,9 @@
 "use client";
 
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { api, type KillSwitchState } from "@/lib/api";
 import { useSystemHealthContext } from "@/lib/SystemHealthContext";
 import { PRODUCT_NAME } from "@/config/product";
 import { RiskIndicator } from "./RiskIndicator";
@@ -24,12 +26,32 @@ const NAV = [
 export function Shell({ children }: { children: React.ReactNode }) {
   const { health, failed } = useSystemHealthContext();
   const pathname = usePathname();
+  const [killSwitch, setKillSwitch] = useState<KillSwitchState | null>(null);
+
+  const refreshKillSwitch = useCallback(async () => {
+    try {
+      setKillSwitch(await api.killSwitch());
+    } catch {
+      // Discard rather than retain. A stale "clear" reading shown as current is
+      // the single most dangerous thing this chrome could display, so the header
+      // falls back to /health, which fails closed on its own.
+      setKillSwitch(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshKillSwitch();
+    const timer = setInterval(() => void refreshKillSwitch(), 5000);
+    return () => clearInterval(timer);
+  }, [refreshKillSwitch]);
 
   return (
     <div className="flex min-h-screen flex-col">
       <RiskIndicator
         safety={health?.execution_safety ?? null}
         degraded={failed || health?.status === "degraded" || health?.status === "down"}
+        killSwitch={killSwitch}
+        onKillSwitchChanged={() => void refreshKillSwitch()}
       />
 
       <div className="flex flex-1">

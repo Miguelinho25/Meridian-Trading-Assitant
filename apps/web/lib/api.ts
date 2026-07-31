@@ -372,8 +372,69 @@ export type PaperPosition = z.infer<typeof paperPositionSchema>;
 export type DecisionGroup = z.infer<typeof decisionGroupSchema>;
 export type PaperTrade = z.infer<typeof paperTradeSchema>;
 
+export const killSwitchStateSchema = z.object({
+  engaged: z.boolean(),
+  reason: z.string(),
+  actor: z.string(),
+  since: z.string().nullable(),
+  indeterminate: z.boolean(),
+  from_configuration: z.boolean(),
+  summary: z.string(),
+});
+
+export type KillSwitchState = z.infer<typeof killSwitchStateSchema>;
+
+/**
+ * The only mutating helper. Everything else in this client reads.
+ *
+ * Surfaces the server's own explanation on a 4xx rather than a generic failure:
+ * the kill-switch endpoints refuse for specific, actionable reasons, and hiding
+ * them would leave an operator guessing during an incident.
+ */
+async function post<T>(path: string, body: unknown, schema: z.ZodType<T>): Promise<T> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      cache: "no-store",
+    });
+  } catch {
+    throw new ApiError(`Cannot reach the API at ${API_URL}. Is it running? (make dev)`);
+  }
+
+  if (!response.ok) {
+    let detail = `${path} returned ${response.status}`;
+    try {
+      const parsed = await response.json();
+      if (typeof parsed?.detail === "string") detail = parsed.detail;
+    } catch {
+      // Keep the status-code message.
+    }
+    throw new ApiError(detail, response.status);
+  }
+
+  const parsed = schema.safeParse(await response.json());
+  if (!parsed.success) {
+    throw new ApiError(`Unexpected response shape from ${path}: ${parsed.error.message}`);
+  }
+  return parsed.data;
+}
+
 export const api = {
   health: () => request("/health", healthSchema),
+  killSwitch: () => request("/api/kill-switch", killSwitchStateSchema),
+  engageKillSwitch: (reason: string) =>
+    post("/api/kill-switch/engage", { reason, actor: "operator" }, killSwitchStateSchema),
+  disengageKillSwitch: (reason: string) =>
+    post(
+      "/api/kill-switch/disengage",
+      // confirm is sent explicitly rather than defaulted server-side: the second
+      // act is the point, and a default would erase it.
+      { reason, actor: "operator", confirm: true },
+      killSwitchStateSchema,
+    ),
   paperSessions: () => request("/api/paper", z.array(paperSessionSchema)),
   paperSession: (id: string) => request(`/api/paper/${id}`, paperSessionDetailSchema),
   paperEquity: (id: string) =>

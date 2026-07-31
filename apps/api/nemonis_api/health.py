@@ -14,6 +14,7 @@ from typing import Any, Literal
 from fastapi import APIRouter
 from nemonis_config import PRODUCT_NAME, SAFETY_NOTICE, VERSION, get_settings, limits
 from nemonis_db import chain_head, session_scope, verify_chain
+from nemonis_db.killswitch import current_state, resolve
 from nemonis_risk import LimitSet, compose
 from nemonis_risk.profiles import SYSTEM_LIMITS, get_profile
 from pydantic import BaseModel, ConfigDict
@@ -104,6 +105,28 @@ def effective_risk_per_trade() -> Decimal:
     return value
 
 
+async def kill_switch_engaged() -> bool:
+    """The switch as the trading loop sees it.
+
+    Read from the store, not from configuration. /health reported
+    ``settings.kill_switch`` alone, so an operator who engaged the switch through
+    the API saw "clear" here — and the persistent UI banner reads this endpoint,
+    which would have shown KILL SWITCH CLEAR while trading was halted. Two places
+    reporting the same fact must not be able to disagree.
+
+    Fails closed: if the store cannot be read, current_state reports engaged.
+    """
+    configured = get_settings().kill_switch
+    try:
+        async with session_scope() as session:
+            stored = await current_state(session)
+    except Exception:
+        # The database is already reported as down by the component check above.
+        # An unreadable switch is an engaged switch.
+        return True
+    return resolve(stored=stored, configured=configured).engaged
+
+
 @router.get("/health", response_model=HealthResponse, summary="System and safety state")
 async def health() -> HealthResponse:
     settings = get_settings()
@@ -150,7 +173,7 @@ async def health() -> HealthResponse:
             risk_profile=settings.risk_profile.value,
             broker_execution_enabled=settings.broker_execution_enabled,
             live_execution_implemented=limits.LIVE_EXECUTION_IMPLEMENTED,
-            kill_switch_engaged=settings.kill_switch,
+            kill_switch_engaged=await kill_switch_engaged(),
             max_risk_per_trade_pct=str(effective_risk_per_trade()),
             notice=SAFETY_NOTICE,
         ),

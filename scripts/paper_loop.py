@@ -38,6 +38,7 @@ from pathlib import Path
 from nemonis_config import get_settings
 from nemonis_config.settings import ApprovalMode, Mode
 from nemonis_db import session_scope
+from nemonis_db.killswitch import KillSwitchState, current_state, resolve
 from nemonis_db.paper_store import (
     ClosedTradeRow,
     DecisionRow,
@@ -119,6 +120,30 @@ def _rates() -> dict[str, Decimal]:
     }
 
 
+#: Latest kill-switch reading, refreshed before every tick. A mutable holder
+#: because PaperSession takes a *synchronous* callable and reading the store is
+#: async — the runner does the I/O, the session just asks.
+#:
+#: Seeded True, not False. Before the first read the state is genuinely unknown,
+#: and an unknown state must block trading. A False seed would let exactly one
+#: tick through on a switch that was already engaged.
+_kill_switch_state: dict[str, bool] = {"engaged": True}
+
+
+async def refresh_kill_switch() -> KillSwitchState:
+    """Re-read the switch. Called before each tick, never cached across ticks.
+
+    Reading once at start-up would mean engaging it only took effect on the next
+    restart, which is the defect the stored switch exists to fix.
+    """
+    configured = get_settings().kill_switch
+    async with session_scope() as db:
+        stored = await current_state(db)
+    resolved = resolve(stored=stored, configured=configured)
+    _kill_switch_state["engaged"] = resolved.engaged
+    return resolved
+
+
 def make_session(session_id: str, instruments: list[str], balance: str, seed: int) -> PaperSession:
     settings = get_settings()
     return PaperSession(
@@ -133,9 +158,10 @@ def make_session(session_id: str, instruments: list[str], balance: str, seed: in
         # single most dangerous default in the system.
         mode=Mode.PAPER,
         approval_mode=ApprovalMode.AUTO_PAPER_FULL,
-        # Read live from settings on every call, so engaging the switch stops the
-        # next decision rather than requiring a restart.
-        kill_switch=lambda: get_settings().kill_switch,
+        # Reads the value refreshed before this tick, which comes from the
+        # database rather than configuration. Engaging it through the API or the
+        # UI stops the *next decision*, with no restart.
+        kill_switch=lambda: _kill_switch_state["engaged"],
         prop_profile=GENERIC_TWO_PHASE,
         seed=seed,
     )
@@ -281,10 +307,23 @@ async def main() -> int:
     peak = Decimal(args.balance)
     acted = 0
 
+    halted_announced = False
+
     for moment, bars in steps:
         if _stopping:
             print("\nStop requested — finishing cleanly.")
             break
+
+        # Before the tick, not after: a switch engaged a moment ago must stop the
+        # decision about to be made, not the one after it.
+        switch = await refresh_kill_switch()
+        if switch.engaged and not halted_announced:
+            print(f"  {switch.summary}")
+            print("  Positions are still settled; no new trade will be permitted.")
+            halted_announced = True
+        elif not switch.engaged and halted_announced:
+            print(f"  Kill switch released at {moment.date()} — trading resumes.")
+            halted_announced = False
 
         outcome = session.tick(bars, at=moment)
         if not outcome.acted:
@@ -390,7 +429,7 @@ async def main() -> int:
     print(f"  trades       {stats['closed'] + this_run} ({this_run} this run)")
     print(f"  balance      {session.account.balance}")
     print(f"  open         {len(session.account.positions)} position(s)")
-    if session.kill_switch_engaged:
+    if _kill_switch_state["engaged"]:
         print("\n  KILL SWITCH ENGAGED — positions were settled, no new trade permitted.")
     return 0
 
