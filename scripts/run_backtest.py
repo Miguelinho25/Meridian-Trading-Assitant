@@ -278,20 +278,49 @@ async def main() -> int:
     survives_all: bool | None = None
     if args.validate:
         wf = walk_forward(engine, series, config)
-        mc = monte_carlo(result.trades, starting_balance=config.starting_balance)
+        # The prop profile is passed so Monte Carlo can report pass probability
+        # against the *evaluation* rules rather than only ruin. For a challenge
+        # account, "would this have passed" is the question, not "would it have
+        # survived".
+        mc = monte_carlo(
+            result.trades,
+            starting_balance=config.starting_balance,
+            prop_profile=GENERIC_TWO_PHASE,
+        )
         st = stress_test(engine, series, config)
+
         validation = {
             "walk_forward": {
                 "windows": len(wf.windows),
                 "profitable_windows": wf.profitable_windows,
+                "consistency": wf.consistency,
             },
-            "monte_carlo": {"pass_probability": mc.pass_probability},
-            "stress": {s.scenario.name: s.net_pnl for s in st},
+            "monte_carlo": {
+                "iterations": mc.iterations,
+                "ruin_probability": mc.ruin_probability,
+                "prop_pass_probability": mc.prop_pass_probability,
+                "median_max_drawdown": mc.median_max_drawdown,
+                "p95_max_drawdown": mc.p95_max_drawdown,
+                "p05_terminal": mc.p05_terminal,
+            },
+            "stress": {
+                sc.name: {
+                    "net_pnl": sc.metrics.net_pnl,
+                    "degradation": st.degradation(sc.name),
+                }
+                for sc in st.scenarios
+            },
+            "stress_survives_all": st.survives_all,
         }
+
+        # Every gate, not a hand-rolled subset. survives_all is StressResult's own
+        # property; recomputing it here would let the two drift.
+        pass_probability = mc.prop_pass_probability
         survives_all = (
-            wf.profitable_windows > len(wf.windows) // 2
-            and mc.pass_probability >= Decimal("0.5")
-            and all(s.net_pnl > 0 for s in st)
+            wf.consistency > Decimal("0.5")
+            and st.survives_all
+            and pass_probability is not None
+            and pass_probability >= Decimal("0.5")
         )
 
     fingerprints = [_trade_fingerprint(t) for t in result.trades]
